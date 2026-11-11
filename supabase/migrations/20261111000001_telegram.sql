@@ -20,6 +20,11 @@ create table if not exists public.telegram_users (
 create index if not exists telegram_users_phone_idx on public.telegram_users (phone);
 create index if not exists telegram_users_user_idx  on public.telegram_users (user_id);
 
+-- updated_at ustunini yangilovchi funksiya (asosiy sxemada ham bor, bu yerda ehtiyot uchun)
+create or replace function public.touch_updated_at()
+returns trigger language plpgsql as $$
+begin new.updated_at = now(); return new; end $$;
+
 drop trigger if exists telegram_users_touch on public.telegram_users;
 create trigger telegram_users_touch before update on public.telegram_users
   for each row execute function public.touch_updated_at();
