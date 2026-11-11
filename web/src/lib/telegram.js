@@ -68,7 +68,10 @@ export async function telegramSignIn() {
     });
     const body = await res.json().catch(() => ({}));
     if (body.need_phone) return { needPhone: true };
-    if (!res.ok || !body.access_token) return { error: body.error || `Server xatosi (${res.status})` };
+    if (!res.ok || !body.access_token) {
+      const detail = body.error || body.message || body.msg || "";
+      return { error: `Server xatosi (${res.status})${detail ? ": " + detail : ""}` };
+    }
     lsSet(LS_KEY, String(body.tg_id ?? tgUser?.id ?? ""));
     return { session: { access_token: body.access_token, refresh_token: body.refresh_token } };
   } catch {
