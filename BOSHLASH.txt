@@ -1,0 +1,22 @@
+VETCHAQIRUV — QAYERDAN BOSHLASH
+
+1) BAZANI O'RNATISH (bir marta)
+   - supabase.com -> "VetChaqiruv-EU" loyihasini oching (Sidney emas!)
+   - Chap menyu: SQL Editor -> New query
+   - Shu papkadagi "vetchaqiruv_ornatish.sql" faylini Bloknot bilan oching,
+     Ctrl+A, Ctrl+C, SQL Editor'ga Ctrl+V, so'ng "Run".
+   - "Success" chiqsa — tayyor.
+
+2) TELEFON ORQALI KIRISH
+   - Authentication -> Sign In / Providers -> Phone -> yoqing
+   - Test Phone Numbers maydoniga yozing:
+     998901110001=123456, 998901110002=123456, 998901110003=123456
+
+3) ILOVANI ISHGA TUSHIRISH
+   - nodejs.org dan Node.js (LTS) o'rnating
+   - Shu papkadagi "web" papkasini oching, manzil qatoriga "powershell" deb yozib Enter bosing
+   - Buyruqlar:  npm install    keyin   npm run dev
+   - Brauzerda: http://localhost:5173
+   - Kirish: 90 111 00 01, kod 123456
+
+Batafsil: README.md

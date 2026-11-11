@@ -1,0 +1,14 @@
+# Supabase CLI sozlamalari (faqat Edge Functions uchun kerakli qismi)
+project_id = "vetchaqiruv"
+
+[functions.send-sms]
+verify_jwt = false   # Auth hook o'z imzosi bilan tekshiriladi
+
+[functions.notify]
+verify_jwt = false   # x-notify-secret sarlavhasi bilan tekshiriladi
+
+[functions.tg-auth]
+verify_jwt = false   # Telegram initData imzosi bilan tekshiriladi
+
+[functions.bot]
+verify_jwt = false   # Telegram webhook maxfiy kaliti bilan tekshiriladi
