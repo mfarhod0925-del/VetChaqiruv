@@ -6,8 +6,24 @@
 // Sozlamalar: TELEGRAM_BOT_TOKEN, APP_URL. SUPABASE_URL va SUPABASE_SERVICE_ROLE_KEY ni Supabase o'zi beradi.
 import { createClient } from "npm:@supabase/supabase-js@2";
 
-
 // ===== Umumiy kod (_shared) — bitta faylga jamlangan =====
+// Supabase kalitlari: yangi (sb_publishable_/sb_secret_) bo'lsa — ular, bo'lmasa eski (anon/service_role).
+// Edge Functions muhitida yangi kalitlar SUPABASE_PUBLISHABLE_KEYS va SUPABASE_SECRET_KEYS (JSON) sifatida beriladi.
+function pick(jsonVar: string, legacyVar: string): string {
+  const raw = Deno.env.get(jsonVar);
+  if (raw) {
+    try {
+      const obj = JSON.parse(raw) as Record<string, string>;
+      const k = obj.default ?? Object.values(obj)[0];
+      if (k) return k;
+    } catch { /* JSON emas — o'zi kalit bo'lishi mumkin */ if (raw.startsWith("sb_")) return raw; }
+  }
+  return Deno.env.get(legacyVar) ?? "";
+}
+const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
+const SECRET_KEY = pick("SUPABASE_SECRET_KEYS", "SUPABASE_SERVICE_ROLE_KEY");
+const PUBLISHABLE_KEY = pick("SUPABASE_PUBLISHABLE_KEYS", "SUPABASE_ANON_KEY");
+
 // Eskiz.uz orqali SMS yuborish.
 // Kerakli sozlamalar (supabase secrets set ...):
 //   ESKIZ_EMAIL, ESKIZ_PASSWORD  — eskiz.uz kabinetidagi login
@@ -156,8 +172,8 @@ function openBtn(text = "🐄 VetChaqiruv'ni ochish", path = "") {
 
 // ===== Funksiya kodi =====
 
-const SELF_URL = `${Deno.env.get("SUPABASE_URL")}/functions/v1/bot`;
-const sb = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!, {
+const SELF_URL = `${SUPABASE_URL}/functions/v1/bot`;
+const sb = createClient(SUPABASE_URL, SECRET_KEY, {
   auth: { persistSession: false },
 });
 

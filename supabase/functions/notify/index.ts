@@ -13,6 +13,7 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { normalizePhone, sendSms } from "../_shared/eskiz.ts";
 import { escH, openBtn, tg, tgEnabled } from "../_shared/telegram.ts";
+import { SECRET_KEY, SUPABASE_URL } from "../_shared/keys.ts";
 
 const ANIMALS: Record<string, string> = {
   sigir: "sigir", qoy: "qo'y", echki: "echki", ot: "ot", parranda: "parranda", boshqa: "hayvon",
@@ -33,7 +34,7 @@ Deno.serve(async (req) => {
   const { type, table, record, old_record } = (await req.json()) as {
     type: "INSERT" | "UPDATE"; table: string; record: Rec; old_record: Rec | null;
   };
-  const sb = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!, {
+  const sb = createClient(SUPABASE_URL, SECRET_KEY, {
     auth: { persistSession: false },
   });
   const app = (Deno.env.get("APP_URL") ?? "").replace(/\/$/, "");

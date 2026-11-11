@@ -10,9 +10,9 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { hex, verifyInitData } from "../_shared/telegram.ts";
 import { normalizePhone } from "../_shared/eskiz.ts";
+import { PUBLISHABLE_KEY, SECRET_KEY, SUPABASE_URL } from "../_shared/keys.ts";
 
-const URL_ = Deno.env.get("SUPABASE_URL")!;
-const admin = createClient(URL_, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!, { auth: { persistSession: false } });
+const admin = createClient(SUPABASE_URL, SECRET_KEY, { auth: { persistSession: false } });
 
 const cors = {
   "Access-Control-Allow-Origin": "*",
@@ -83,7 +83,7 @@ Deno.serve(async (req) => {
   }
 
   // Sessiya: vaqtinchalik parol bilan kiramiz va tokenlarni ilovaga qaytaramiz
-  const pub = createClient(URL_, Deno.env.get("SUPABASE_ANON_KEY")!, { auth: { persistSession: false } });
+  const pub = createClient(SUPABASE_URL, PUBLISHABLE_KEY, { auth: { persistSession: false } });
   const { data: s, error: sErr } = await pub.auth.signInWithPassword({ phone: "+" + phone, password });
   if (sErr || !s.session) {
     console.error("tg-auth signin", sErr);

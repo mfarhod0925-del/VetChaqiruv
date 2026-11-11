@@ -7,9 +7,10 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { APP_URL, BOT_TOKEN, openBtn, tg, webhookSecret } from "../_shared/telegram.ts";
 import { normalizePhone } from "../_shared/eskiz.ts";
+import { SECRET_KEY, SUPABASE_URL } from "../_shared/keys.ts";
 
-const SELF_URL = `${Deno.env.get("SUPABASE_URL")}/functions/v1/bot`;
-const sb = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!, {
+const SELF_URL = `${SUPABASE_URL}/functions/v1/bot`;
+const sb = createClient(SUPABASE_URL, SECRET_KEY, {
   auth: { persistSession: false },
 });
 

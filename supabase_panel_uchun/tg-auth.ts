@@ -9,8 +9,24 @@
 // Talab: Authentication → Providers → Phone yoqilgan bo'lishi kerak.
 import { createClient } from "npm:@supabase/supabase-js@2";
 
-
 // ===== Umumiy kod (_shared) — bitta faylga jamlangan =====
+// Supabase kalitlari: yangi (sb_publishable_/sb_secret_) bo'lsa — ular, bo'lmasa eski (anon/service_role).
+// Edge Functions muhitida yangi kalitlar SUPABASE_PUBLISHABLE_KEYS va SUPABASE_SECRET_KEYS (JSON) sifatida beriladi.
+function pick(jsonVar: string, legacyVar: string): string {
+  const raw = Deno.env.get(jsonVar);
+  if (raw) {
+    try {
+      const obj = JSON.parse(raw) as Record<string, string>;
+      const k = obj.default ?? Object.values(obj)[0];
+      if (k) return k;
+    } catch { /* JSON emas — o'zi kalit bo'lishi mumkin */ if (raw.startsWith("sb_")) return raw; }
+  }
+  return Deno.env.get(legacyVar) ?? "";
+}
+const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
+const SECRET_KEY = pick("SUPABASE_SECRET_KEYS", "SUPABASE_SERVICE_ROLE_KEY");
+const PUBLISHABLE_KEY = pick("SUPABASE_PUBLISHABLE_KEYS", "SUPABASE_ANON_KEY");
+
 // Eskiz.uz orqali SMS yuborish.
 // Kerakli sozlamalar (supabase secrets set ...):
 //   ESKIZ_EMAIL, ESKIZ_PASSWORD  — eskiz.uz kabinetidagi login
@@ -159,8 +175,7 @@ function openBtn(text = "🐄 VetChaqiruv'ni ochish", path = "") {
 
 // ===== Funksiya kodi =====
 
-const URL_ = Deno.env.get("SUPABASE_URL")!;
-const admin = createClient(URL_, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!, { auth: { persistSession: false } });
+const admin = createClient(SUPABASE_URL, SECRET_KEY, { auth: { persistSession: false } });
 
 const cors = {
   "Access-Control-Allow-Origin": "*",
@@ -231,7 +246,7 @@ Deno.serve(async (req) => {
   }
 
   // Sessiya: vaqtinchalik parol bilan kiramiz va tokenlarni ilovaga qaytaramiz
-  const pub = createClient(URL_, Deno.env.get("SUPABASE_ANON_KEY")!, { auth: { persistSession: false } });
+  const pub = createClient(SUPABASE_URL, PUBLISHABLE_KEY, { auth: { persistSession: false } });
   const { data: s, error: sErr } = await pub.auth.signInWithPassword({ phone: "+" + phone, password });
   if (sErr || !s.session) {
     console.error("tg-auth signin", sErr);

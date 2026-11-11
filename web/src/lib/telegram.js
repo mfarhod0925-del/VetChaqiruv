@@ -1,6 +1,6 @@
 // Telegram Mini App bilan ishlash.
 // Ilova oddiy brauzerda ochilsa, bu yerdagi hamma narsa jim o'tib ketadi (inTelegram = false).
-import { SUPABASE_ANON_KEY, SUPABASE_URL } from "./supabase.js";
+import { SUPABASE_URL } from "./supabase.js";
 
 export const tg = typeof window !== "undefined" ? window.Telegram?.WebApp : undefined;
 export const inTelegram = Boolean(tg?.initData);
@@ -63,7 +63,9 @@ export async function telegramSignIn() {
   try {
     const res = await fetch(`${SUPABASE_URL}/functions/v1/tg-auth`, {
       method: "POST",
-      headers: { "Content-Type": "application/json", apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${SUPABASE_ANON_KEY}` },
+      // Kalit yuborilmaydi: funksiya Telegram imzosini o'zi tekshiradi (verify_jwt o'chiq).
+      // text/plain — brauzer qo'shimcha CORS so'rovisiz yuboradi.
+      headers: { "Content-Type": "text/plain" },
       body: JSON.stringify({ initData: tg.initData }),
     });
     const body = await res.json().catch(() => ({}));
