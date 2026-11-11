@@ -45,9 +45,11 @@ Supabase → **VetChaqiruv-EU** loyihasi → **SQL Editor → New query**. `tele
 
 ### 4. Ilovani internetga chiqarish
 
-Mini app faqat `https://` manzilda ishlaydi. Agar ilova hali Vercel'da bo'lmasa, README'dagi 7-qadamni bajaring (GitHub → Vercel). Manzilni yozib oling, masalan `https://vetchaqiruv.vercel.app`.
+Mini app faqat `https://` manzilda ishlaydi. Agar ilova hali Vercel'da bo'lmasa, README'dagi 7-qadamni bajaring (GitHub → Vercel). Manzilni yozib oling, masalan `https://web-c2pz.vercel.app`.
 
 ### 5. Server funksiyalarini joylash
+
+> Git yoki Node.js o'rnatilmagan bo'lsa: `supabase_panel_uchun/OQIBCHIQING.txt` dagi usul bilan Supabase panelining o'zida joylang. Pastdagi buyruqlar shart emas.
 
 `VetChaqiruv` papkasida PowerShell oching:
 
@@ -56,7 +58,7 @@ npx supabase@latest login
 npx supabase@latest link --project-ref aoojizjokvvpgtkoayoo
 
 npx supabase@latest secrets set TELEGRAM_BOT_TOKEN="1234567890:AA..."
-npx supabase@latest secrets set APP_URL="https://vetchaqiruv.vercel.app"
+npx supabase@latest secrets set APP_URL="https://web-c2pz.vercel.app"
 
 npx supabase@latest functions deploy bot --no-verify-jwt
 npx supabase@latest functions deploy tg-auth --no-verify-jwt

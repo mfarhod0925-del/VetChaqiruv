@@ -1,0 +1,23 @@
+SUPABASE PANELI ORQALI JOYLASH (CLI va Git kerak emas)
+
+Bu papkadagi har bir fayl bitta server funksiyasi. Ular supabase/functions dagi kod bilan bir xil,
+faqat umumiy (_shared) qismi ichiga qo'shilgan, shuning uchun panelga bitta fayl qilib qo'yish mumkin.
+
+  bot.ts      -> funksiya nomi: bot
+  tg-auth.ts  -> funksiya nomi: tg-auth
+  notify.ts   -> funksiya nomi: notify   (mavjud bo'lsa, eski kodni almashtiring)
+
+Har biri uchun:
+  1. Supabase -> VetChaqiruv-EU -> Edge Functions -> "Deploy a new function" -> "Via Editor"
+     (notify allaqachon bo'lsa: uni oching -> "Code" -> kodni almashtiring)
+  2. Nomini yuqoridagidek yozing.
+  3. Faylni Bloknot bilan oching, Ctrl+A, Ctrl+C, editordagi matn o'rniga Ctrl+V.
+  4. "Deploy function" ni bosing.
+  5. Funksiya -> "Details" (yoki Settings) -> "Verify JWT with legacy secret" ni O'CHIRING -> Save.
+
+Sirlar: Edge Functions -> Secrets (yoki Project Settings -> Edge Functions):
+  TELEGRAM_BOT_TOKEN = BotFather bergan token
+  APP_URL            = https://web-c2pz.vercel.app
+
+Oxirida brauzerda oching:
+  https://aoojizjokvvpgtkoayoo.supabase.co/functions/v1/bot?setup=1
