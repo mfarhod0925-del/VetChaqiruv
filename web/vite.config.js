@@ -7,6 +7,7 @@ export default defineConfig({
     react(),
     VitePWA({
       registerType: "autoUpdate",
+      injectRegister: null, // main.jsx o'zi ro'yxatdan o'tkazadi (Telegram ichida emas)
       includeAssets: ["favicon.svg"],
       manifest: {
         name: "VetChaqiruv",
