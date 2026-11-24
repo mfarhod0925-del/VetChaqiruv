@@ -5,11 +5,35 @@ import { supabase, must } from "../../lib/supabase.js";
 import { useDrugs, useLive } from "../../lib/live.js";
 import { errText } from "../../lib/util.js";
 import { useToast } from "../../toast.jsx";
-import { ErrorNote, Loading } from "../../ui.jsx";
+import { ErrorNote, Icon, Loading, Pill } from "../../ui.jsx";
+
+/** Tumandagi retseptlar bo'yicha dori talabi (oxirgi 30 kun) — qaysi dorini ko'proq olib qo'yish kerakligini ko'rsatadi */
+function Demand({ saved, byId }) {
+  const d = useLive(async () => must(await supabase.rpc("drug_demand", { p_days: 30 })), [], []);
+  const rows = (d.data || []).slice(0, 6);
+  if (d.error || !rows.length) return null;
+  return (
+    <div className="card" style={{ marginBottom: 12 }}>
+      <div className="row"><Icon name="chart" size={20} /><b>Tumandagi talab — oxirgi 30 kun</b></div>
+      <table className="stock"><tbody>
+        {rows.map((r) => {
+          const qty = saved[r.drug_id]?.qty || 0;
+          return (
+            <tr key={r.drug_id}>
+              <td>{byId[r.drug_id]?.name || r.drug_id}<br /><small className="meta">{r.cases} ta retseptda</small></td>
+              <td>{qty > 0 ? <Pill s={[`Omborda ${qty}`, "ok"]} /> : <Pill s={["Talab bor, omborda yo'q", "bad"]} />}</td>
+            </tr>
+          );
+        })}
+      </tbody></table>
+      <div className="meta" style={{ marginTop: 6 }}>Veterinarlar yozgan retseptlar asosidagi taxminiy ko'rsatkich.</div>
+    </div>
+  );
+}
 
 export default function Stock() {
   const { uid, pharmacy } = useAuth();
-  const { drugs } = useDrugs();
+  const { drugs, byId } = useDrugs();
   const toast = useToast();
   const stock = useLive(
     async () => must(await supabase.from("pharmacy_stock").select("drug_id, qty, price").eq("pharmacy_id", uid)),
@@ -51,6 +75,7 @@ export default function Stock() {
     <>
       <h1>Ombor qoldig'i</h1>
       <p className="lead">{inStock} xil dori mavjud. Sonini va narxini (so'm) kiriting, so'ng saqlang.</p>
+      <Demand saved={saved} byId={byId} />
       <input type="text" aria-label="Qidirish" placeholder="Dorini qidirish" value={q} onChange={(e) => setQ(e.target.value)} style={{ marginBottom: 10 }} />
       <ErrorNote error={stock.error} onRetry={stock.reload} />
       {stock.loading && !stock.data ? <Loading /> : (

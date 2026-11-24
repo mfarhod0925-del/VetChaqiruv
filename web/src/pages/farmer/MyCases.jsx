@@ -3,27 +3,46 @@ import { Link } from "react-router-dom";
 import { useAuth } from "../../auth.jsx";
 import { supabase, must } from "../../lib/supabase.js";
 import { useDrugs, useLive } from "../../lib/live.js";
-import { CASE_STATUS, RES_STATUS, animalName } from "../../lib/constants.js";
+import { CASE_STATUS, RES_STATUS, animalName, providerWord, serviceName } from "../../lib/constants.js";
+import { fmtDate } from "../../lib/animalcare.js";
 import { ago, errText, som } from "../../lib/util.js";
 import { useToast } from "../../toast.jsx";
 import { ErrorNote, Loading, Pill } from "../../ui.jsx";
 
 const STATUS_TOAST = {
-  accepted: "Veterinar arizangizni qabul qildi",
-  on_way: "Veterinar yo'lga chiqdi",
-  arrived: "Veterinar yetib keldi",
-  declined: "Veterinar arizani qabul qila olmadi",
+  accepted: (w) => `${w} arizangizni qabul qildi`,
+  on_way: (w) => `${w} yo'lga chiqdi`,
+  arrived: (w) => `${w} yetib keldi`,
+  declined: (w) => `${w} arizani qabul qila olmadi`,
 };
+const Cap = (s) => s.charAt(0).toUpperCase() + s.slice(1);
+
+/** Ariza sarlavhasi: davolashda "Sigir · Fermaga chaqiruv", boshqa xizmatda "Jun olish · Qo'y × 25" */
+export function caseTitle(c) {
+  const cnt = c.animal_count > 1 ? ` × ${c.animal_count}` : "";
+  if (!c.service || c.service === "treatment") return `${animalName(c.animal)}${cnt} · ${c.kind === "video" ? "Video maslahat" : "Fermaga chaqiruv"}`;
+  return `${serviceName(c.service)} · ${animalName(c.animal)}${cnt}`;
+}
+function caseLine(c) {
+  const d = c.details || {};
+  if (!c.service || c.service === "treatment") return (c.symptoms || []).join(", ") || c.note || "Alomat ko'rsatilmagan";
+  const parts = [];
+  if (c.preferred_date) parts.push(`Sana: ${fmtDate(c.preferred_date)}`);
+  if (d.tasks?.length) parts.push(d.tasks.join(", "));
+  if (d.heat_signs?.length) parts.push(d.heat_signs.join(", "));
+  if (d.ins_date) parts.push(`Urug'lantirilgan: ${fmtDate(d.ins_date)}`);
+  return parts.join(" · ") || c.note || "";
+}
 
 export function CaseCard({ c, forVet }) {
   return (
     <Link className="card" to={`/case/${c.id}`}>
       <div className="row" style={{ alignItems: "flex-start" }}>
         <div className="grow">
-          <h3>{animalName(c.animal)}{c.animal_count > 1 ? ` × ${c.animal_count}` : ""} · {c.kind === "video" ? "Video maslahat" : "Fermaga chaqiruv"}</h3>
-          <div className="meta">{(c.symptoms || []).join(", ") || c.note || "Alomat ko'rsatilmagan"}</div>
+          <h3>{caseTitle(c)}</h3>
+          {caseLine(c) && <div className="meta">{caseLine(c)}</div>}
           <div className="meta">
-            <span>{forVet ? `${c.contact_name} · ${c.village || c.district}` : c.vets?.full_name || "Barcha veterinarlarga"}</span>
+            <span>{forVet ? `${c.contact_name} · ${c.village || c.district}` : c.vets?.full_name || `Barcha ${providerWord(c.service, true)}ga`}</span>
             <span>{ago(c.created_at)}</span>
           </div>
         </div>
@@ -31,6 +50,7 @@ export function CaseCard({ c, forVet }) {
           <Pill s={CASE_STATUS[c.status]} />
           {c.urgency === "shoshilinch" && c.status === "new" && <Pill s={["Shoshilinch", "bad"]} />}
           {c.rx_at && <Pill s={["Retsept", "mute"]} />}
+          {c.result_at && <Pill s={["Natija", "mute"]} />}
         </div>
       </div>
     </Link>
@@ -82,7 +102,10 @@ export default function MyCases() {
     if (!cases.data) return;
     const now = Object.fromEntries(cases.data.map((c) => [c.id, c.status]));
     if (prev.current) {
-      for (const [id, st] of Object.entries(now)) if (prev.current[id] && prev.current[id] !== st && STATUS_TOAST[st]) toast(STATUS_TOAST[st]);
+      for (const c of cases.data) {
+        const st = c.status;
+        if (prev.current[c.id] && prev.current[c.id] !== st && STATUS_TOAST[st]) toast(STATUS_TOAST[st](Cap(providerWord(c.service))));
+      }
     }
     prev.current = now;
   }, [cases.data, toast]);

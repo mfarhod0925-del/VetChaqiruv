@@ -7,6 +7,11 @@ VETCHAQIRUV — QAYERDAN BOSHLASH
      Ctrl+A, Ctrl+C, SQL Editor'ga Ctrl+V, so'ng "Run".
    - "Success" chiqsa — tayyor.
 
+1b) YANGI XIZMATLAR (urug'lantirish, homiladorlik, jun olish, qassob, hayvon kartasi, AI)
+   - Xuddi shu yo'l bilan "yangi_xizmatlar_ornatish.sql" faylini ham Run qiling
+     (albatta 1-qadamdan KEYIN).
+   - Sun'iy intellekt: supabase_panel_uchun/OQIBCHIQING.txt dagi "ai-maslahat" bo'limiga qarang.
+
 2) TELEFON ORQALI KIRISH
    - Authentication -> Sign In / Providers -> Phone -> yoqing
    - Test Phone Numbers maydoniga yozing:

@@ -6,6 +6,9 @@ Chorvadorlarni tumanidagi veterinarlar va vet-dorixonalar bilan bog'laydigan ilo
 - **Veterinar** tumanidagi arizalarni qabul qiladi, «yo'lda / yetib keldim» deb belgilaydi, yozishadi, retsept yozadi.
 - **Dorixona** ombor qoldig'ini kiritadi, buyurtmalarni qabul qiladi. «Berildi» bosilganda qoldiq avtomatik kamayadi.
 - Har bir muhim voqeada kerakli odamga **SMS** boradi (Eskiz.uz orqali).
+- **Qo'shimcha xizmatlar:** sun'iy urug'lantirish, homiladorlik tekshiruvi (UZI/rektal), jun olish (qirqim) va qassob. Ularni veterinar yoki **usta** (urug'lantirish texnigi, qirquvchi, qassob) qabul qiladi.
+- **Hayvon kartasi:** har bir sigir/qo'y/echkining urug'lantirish, homiladorlik, tug'ish, emlash va davolash tarixi; tug'ish muddati va qayta kuyikish eslatmalari.
+- **Sun'iy intellekt yordamchisi:** alomatlar bo'yicha shoshilinchlik darajasi va veterinar kelguncha xavfsiz birinchi qadamlar (tashxis qo'ymaydi, dori buyurmaydi).
 
 ---
 
@@ -91,6 +94,8 @@ To'liq oqimni sinash uchun uchta brauzer oynasidan (yoki inkognito rejimidan) ch
    - `VetChaqiruv: chorvador {ism} chaqiruvni bekor qildi.`
    - `VetChaqiruv: yangi dori buyurtmasi, {summa}. Mijoz: {ism} {telefon}`
    - `VetChaqiruv: {dorixona} dorilaringizni tayyorladi. Manzil: {manzil}`
+   - `VetChaqiruv: yangi buyurtma — {xizmat}. {hayvon}, {qishloq}. Sana: {sana}. {havola}` (urug'lantirish, homiladorlik tekshiruvi, jun olish, qassob)
+   - `VetChaqiruv: usta {ism} arizangizni qabul qildi. Tel: {telefon}` (va «mutaxassis {ism} …», «usta {ism} yo'lga chiqdi.»)
 
    Eskiz boshqacha matnni tasdiqlasa, matnlarni `supabase/functions/notify/index.ts` faylida o'zgartiring. Kod matnini esa `OTP_TEMPLATE` sozlamasi orqali o'zgartirasiz.
 
@@ -168,9 +173,23 @@ meet.jit.si xona ochuvchidan Google yoki GitHub orqali kirishni so'rashi mumkin.
 - **Foydalanuvchilar:** Authentication → Users.
 - **Arizalar, buyurtmalar:** Table Editor.
 
+## Yangi xizmatlar va sun'iy intellektni yoqish
+
+1. Baza: SQL Editor'da `vetchaqiruv_ornatish.sql` dan **keyin** `yangi_xizmatlar_ornatish.sql` ni ishga tushiring (ichida `supabase/migrations/20261125000001_xizmatlar.sql` bilan bir xil kod; qayta ishga tushirish xavfsiz). Mavjud veterinarlarga avtomatik «Davolash» xizmati beriladi, mutaxassisligida «Sun'iy urug'lantirish» bo'lsa — urug'lantirish ham.
+2. `notify` funksiyasini yangilang (yangi xizmat SMS matnlari qo'shilgan) va Eskiz'da yangi shablonlarni moderatsiyadan o'tkazing.
+3. Sun'iy intellekt (ixtiyoriy):
+   ```bash
+   npx supabase@latest secrets set ANTHROPIC_API_KEY="sk-ant-..."   # console.anthropic.com
+   npx supabase@latest secrets set AI_DAILY_LIMIT="20"              # ixtiyoriy: 1 kishiga kuniga so'rov
+   npx supabase@latest secrets set AI_MODEL="claude-haiku-5-5"      # ixtiyoriy
+   npx supabase@latest functions deploy ai-maslahat --no-verify-jwt
+   ```
+   Panel orqali joylash: `supabase_panel_uchun/ai-maslahat.ts`. Kalit berilmasa ilova faqat o'zining oddiy (qoidaga asoslangan) baholashini ko'rsatadi — hammasi ishlayveradi.
+   Kalit faqat serverda (`secrets`) turadi, ilova kodiga qo'yilmaydi. AI javobi tashxis emas: ilovada har doim «yakuniy qarorni veterinar qiladi» deb yoziladi.
+
 ## Testlar
 
-`tests/run_local.sh` skripti bazani mahalliy PostgreSQL 16 da Supabase muhitiga o'xshatib ishga tushiradi va 40 ta tekshiruvni bajaradi: kirish qoidalari, qabul qilish poygasi, retsept, band qilish, qoldiqdan ayirish, rad etish va qayta yuborish, rasmlarga ruxsat.
+`tests/run_local.sh` skripti bazani mahalliy PostgreSQL 16 da Supabase muhitiga o'xshatib ishga tushiradi va tekshiruvlarni bajaradi: kirish qoidalari, qabul qilish poygasi, retsept, band qilish, qoldiqdan ayirish, rad etish va qayta yuborish, rasmlarga ruxsat (`tests/scenario.sql`); yangi xizmatlar, ustalar, hayvon kartasi, natija kiritish, AI limiti va dorixona talabi (`tests/xizmatlar.sql`).
 
 ```bash
 sudo bash tests/run_local.sh     # Linux, PostgreSQL 16 o'rnatilgan bo'lishi kerak

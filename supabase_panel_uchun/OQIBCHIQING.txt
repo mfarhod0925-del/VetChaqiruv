@@ -6,6 +6,7 @@ faqat umumiy (_shared) qismi ichiga qo'shilgan, shuning uchun panelga bitta fayl
   bot.ts      -> funksiya nomi: bot
   tg-auth.ts  -> funksiya nomi: tg-auth
   notify.ts   -> funksiya nomi: notify   (mavjud bo'lsa, eski kodni almashtiring)
+  ai-maslahat.ts -> funksiya nomi: ai-maslahat   (sun'iy intellekt yordamchisi, ixtiyoriy)
 
 Har biri uchun:
   1. Supabase -> VetChaqiruv-EU -> Edge Functions -> "Deploy a new function" -> "Via Editor"
@@ -21,3 +22,12 @@ Sirlar: Edge Functions -> Secrets (yoki Project Settings -> Edge Functions):
 
 Oxirida brauzerda oching:
   https://aoojizjokvvpgtkoayoo.supabase.co/functions/v1/bot?setup=1
+
+
+SUN'IY INTELLEKT (ai-maslahat) UCHUN QO'SHIMCHA SIRLAR
+  ANTHROPIC_API_KEY = console.anthropic.com -> API Keys dan olingan kalit (majburiy)
+  AI_DAILY_LIMIT    = 20   (ixtiyoriy: bitta foydalanuvchiga kuniga nechta so'rov)
+  AI_MODEL          = claude-haiku-5-5   (ixtiyoriy)
+Kalit qo'yilmasa ham ilova ishlaydi: "Sun'iy intellektdan so'rash" tugmasi
+"hozircha ulanmagan" deydi, oddiy baholash esa ko'rinib turadi.
+Oldin SQL Editor'da "yangi_xizmatlar_ornatish.sql" ni Run qiling (ai_usage jadvali shu yerda).

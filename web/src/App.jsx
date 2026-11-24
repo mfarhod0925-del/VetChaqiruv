@@ -15,6 +15,8 @@ import NewCase from "./pages/farmer/NewCase.jsx";
 import MyCases from "./pages/farmer/MyCases.jsx";
 import VetsList from "./pages/farmer/VetsList.jsx";
 import DrugSearch from "./pages/farmer/DrugSearch.jsx";
+import Animals from "./pages/farmer/Animals.jsx";
+import AnimalCard from "./pages/farmer/AnimalCard.jsx";
 import Inbox from "./pages/vet/Inbox.jsx";
 import VetProfile from "./pages/vet/VetProfile.jsx";
 import Orders from "./pages/pharmacy/Orders.jsx";
@@ -22,8 +24,9 @@ import Stock from "./pages/pharmacy/Stock.jsx";
 import PharmacyProfile from "./pages/pharmacy/PharmacyProfile.jsx";
 
 const TABS = {
-  farmer: [["/new", "Ariza", "plus"], ["/cases", "Arizalarim", "list"], ["/vets", "Vetlar", "user"], ["/drugs", "Dorilar", "pharm"]],
+  farmer: [["/new", "Ariza", "plus"], ["/cases", "Arizalarim", "list"], ["/animals", "Hayvonlar", "tag"], ["/vets", "Mutaxassis", "user"], ["/drugs", "Dorilar", "pharm"]],
   vet: [["/inbox", "Chaqiruvlar", "bell"], ["/vet-profile", "Profil", "user"]],
+  master: [["/inbox", "Buyurtmalar", "bell"], ["/vet-profile", "Profil", "user"]],
   pharmacy: [["/orders", "Buyurtmalar", "bell"], ["/stock", "Ombor", "box"], ["/pharmacy-profile", "Profil", "user"]],
 };
 
@@ -112,6 +115,8 @@ function Gate() {
         <Route path="/cases" element={<MyCases />} />
         <Route path="/vets" element={<VetsList />} />
         <Route path="/drugs" element={<DrugSearch />} />
+        <Route path="/animals" element={<Animals />} />
+        <Route path="/animal/:id" element={<AnimalCard />} />
         <Route path="/case/:id" element={<CaseDetail />} />
         <Route path="/inbox" element={<Inbox />} />
         <Route path="/vet-profile" element={<VetProfile />} />
