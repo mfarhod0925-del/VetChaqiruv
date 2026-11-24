@@ -33,7 +33,9 @@ export default function Settings() {
     if (role === profile.role) return;
     try {
       await updateProfile({ role });
-      if (role === "vet" && !vet) { toast("Veterinar profilini to'ldiring"); nav("/vet-profile"); return; }
+      if ((role === "vet" || role === "master") && (!vet || vet.kind !== role)) {
+        toast(role === "vet" ? "Veterinar profilini to'ldiring" : "Usta profilini to'ldiring"); nav("/vet-profile"); return;
+      }
       if (role === "pharmacy" && !pharmacy) { toast("Dorixona ma'lumotlarini kiriting"); nav("/pharmacy-profile"); return; }
       nav(ROLE_HOME[role]);
     } catch (e) { toast(errText(e)); }
@@ -54,7 +56,7 @@ export default function Settings() {
       <p className="lead">{fmtPhone(user?.phone)}</p>
 
       <span className="label">Rol</span>
-      <div className="seg">
+      <div className="seg" style={{ "--n": 4 }}>
         {Object.entries(ROLE_NAMES).map(([k, t]) => (
           <button key={k} aria-pressed={profile.role === k} onClick={() => switchRole(k)}>{t}</button>
         ))}

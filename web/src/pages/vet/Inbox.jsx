@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 import { useAuth } from "../../auth.jsx";
 import { supabase, must } from "../../lib/supabase.js";
 import { useLive } from "../../lib/live.js";
-import { VET_STATUS } from "../../lib/constants.js";
+import { KIND_NAMES, VET_STATUS, serviceName } from "../../lib/constants.js";
 import { beep, errText } from "../../lib/util.js";
 import { useToast } from "../../toast.jsx";
 import { ErrorNote, Loading } from "../../ui.jsx";
@@ -47,8 +47,8 @@ export default function Inbox() {
   if (!vet) {
     return (
       <>
-        <h1>Veterinar kabineti</h1>
-        <p className="lead">Chorvadorlar sizni topishi va chaqiruvlar kelishi uchun avval veterinar profilini yarating.</p>
+        <h1>Mutaxassis kabineti</h1>
+        <p className="lead">Chorvadorlar sizni topishi va arizalar kelishi uchun avval profilingizni yarating.</p>
         <Link className="btn primary wide" to="/vet-profile">Profil yaratish</Link>
       </>
     );
@@ -58,7 +58,8 @@ export default function Inbox() {
     <>
       <h1>Chaqiruvlar</h1>
       <div className="card" style={{ marginBottom: 6 }}>
-        <div className="row"><div className="grow"><b>{vet.full_name}</b><div className="meta">{vet.district} tumani · {vet.region}</div></div></div>
+        <div className="row"><div className="grow"><b>{vet.full_name}</b><div className="meta"><span>{KIND_NAMES[vet.kind] || "Veterinar"}</span><span>{vet.district} tumani · {vet.region}</span></div>
+          <div className="tags">{(vet.services || []).map((s) => <span key={s} className="pill">{serviceName(s)}</span>)}</div></div></div>
         <div className="seg" style={{ marginTop: 10 }}>
           {Object.entries(VET_STATUS).map(([k, [t]]) => (
             <button key={k} aria-pressed={vet.status === k} onClick={() => setStatus(k)}>{t}</button>

@@ -47,5 +47,46 @@ export const VET_STATUS = {
   online: ["Bo'sh", "ok"], busy: ["Band", "warn"], offline: ["Ishda emas", "mute"],
 };
 
-export const ROLE_NAMES = { farmer: "Chorvador", vet: "Veterinar", pharmacy: "Dorixona" };
-export const ROLE_HOME = { farmer: "/new", vet: "/inbox", pharmacy: "/orders" };
+export const ROLE_NAMES = { farmer: "Chorvador", vet: "Veterinar", master: "Usta", pharmacy: "Dorixona" };
+export const ROLE_HOME = { farmer: "/new", vet: "/inbox", master: "/inbox", pharmacy: "/orders" };
+/** Arizalarni qabul qiladigan rollar (veterinar yoki usta) */
+export const isProviderRole = (role) => role === "vet" || role === "master";
+
+// ---------------------------------------------------------------------
+// XIZMATLAR. kinds — qaysi mutaxassis ko'rsata oladi (vet: veterinar, master: usta)
+// ---------------------------------------------------------------------
+export const SERVICES = [
+  { id: "treatment", n: "Davolash", d: "Kasal hayvonga veterinar", icon: "vet", kinds: ["vet"],
+    animals: ["sigir", "qoy", "echki", "ot", "parranda", "boshqa"] },
+  { id: "insemination", n: "Sun'iy urug'lantirish", d: "Kuyga kelgan hayvon uchun", icon: "drop", kinds: ["vet", "master"],
+    animals: ["sigir", "qoy", "echki", "ot"] },
+  { id: "pregnancy", n: "Homiladorlik tekshiruvi", d: "UZI yoki rektal tekshiruv", icon: "heart", kinds: ["vet"],
+    animals: ["sigir", "qoy", "echki", "ot"] },
+  { id: "shearing", n: "Jun olish", d: "Qo'y va echki qirqimi", icon: "scissors", kinds: ["master"],
+    animals: ["qoy", "echki"] },
+  { id: "butcher", n: "Qassob", d: "So'yish va bo'laklash", icon: "knife", kinds: ["master"],
+    animals: ["sigir", "qoy", "echki", "ot", "parranda"] },
+];
+export const SERVICE = Object.fromEntries(SERVICES.map((s) => [s.id, s]));
+export const serviceName = (id) => (SERVICE[id] || SERVICE.treatment).n;
+/** Davolashda "veterinar", qolgan xizmatlarda "mutaxassis" */
+export const providerWord = (service, many = false) =>
+  (!service || service === "treatment") ? (many ? "veterinarlar" : "veterinar") : (many ? "mutaxassislar" : "mutaxassis");
+export const KIND_NAMES = { vet: "Veterinar", master: "Usta" };
+
+export const HEAT_SIGNS = ["Bezovta, ko'p ma'raydi", "Boshqa hayvonga sakraydi", "Sakrashga turib beradi",
+  "Shilliq ajralma", "Jinsiy a'zo qizargan, shishgan", "Ishtaha va sut kamaygan"];
+export const BUTCHER_TASKS = ["So'yish", "Terini shilish", "Go'shtni bo'laklash", "Qadoqlash"];
+export const PREG_METHODS = { uzi: "UZI (ultratovush)", rektal: "Rektal tekshiruv", any: "Farqi yo'q" };
+
+// Taxminiy muddatlar (kun). Aniq sana hayvonga qarab farq qiladi — faqat eslatma uchun.
+export const GESTATION = { sigir: 283, qoy: 150, echki: 150, ot: 340 };
+export const HEAT_CYCLE = { sigir: 21, qoy: 17, echki: 21, ot: 21 };
+
+export const EVENT_TYPES = {
+  heat: "Kuyikish kuzatildi", insemination: "Sun'iy urug'lantirildi", pregnancy_check: "Homiladorlik tekshiruvi",
+  birth: "Tug'di", vaccination: "Emlandi", treatment: "Davolandi", shearing: "Jun olindi", slaughter: "So'yildi", note: "Izoh",
+};
+/** Chorvador o'zi yozishi mumkin bo'lgan voqealar */
+export const FARMER_EVENTS = ["heat", "birth", "vaccination", "treatment", "note"];
+export const PREG_RESULT = { pregnant: ["Bo'g'oz", "ok"], open: ["Bo'g'oz emas", "bad"], recheck: ["Qayta tekshirish kerak", "warn"] };

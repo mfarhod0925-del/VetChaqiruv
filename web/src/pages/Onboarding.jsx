@@ -1,13 +1,14 @@
 import { useState } from "react";
 import { useAuth } from "../auth.jsx";
 import { supabase, must } from "../lib/supabase.js";
-import { DEFAULT_REGION, REGIONS } from "../lib/constants.js";
+import { DEFAULT_REGION, REGIONS, SERVICES } from "../lib/constants.js";
 import { errText, fmtPhone } from "../lib/util.js";
 import { Icon, RegionSelect } from "../ui.jsx";
 
 const ROLES = [
   ["farmer", "farm", "Chorvadorman", "Hayvonim uchun veterinar va dori kerak"],
-  ["vet", "vet", "Veterinarman", "Chaqiruvlarni qabul qilaman, maslahat beraman"],
+  ["vet", "vet", "Veterinarman", "Davolash, urug'lantirish, homiladorlik tekshiruvi"],
+  ["master", "scissors", "Ustaman", "Urug'lantirish texnigi, jun qirquvchi yoki qassob"],
   ["pharmacy", "pharm", "Vet-dorixonaman", "Dorilar qoldig'ini ko'rsataman, buyurtma olaman"],
 ];
 
@@ -20,7 +21,10 @@ export default function Onboarding() {
   const [village, setVillage] = useState(profile?.village || "");
   const [phName, setPhName] = useState("");
   const [address, setAddress] = useState("");
+  const [services, setServices] = useState(null); // null = rol bo'yicha standart
   const [busy, setBusy] = useState(false);
+  const allowed = SERVICES.filter((s) => s.kinds.includes(role));
+  const chosen = (services || [allowed[0]?.id]).filter((s) => allowed.some((a) => a.id === s));
   const [err, setErr] = useState("");
   const phone = "+" + String(user?.phone || profile?.phone || "").replace(/\D/g, "");
 
@@ -28,11 +32,12 @@ export default function Onboarding() {
     e.preventDefault();
     if (name.trim().length < 2) { setErr("Ism-familiyangizni kiriting"); return; }
     if (role === "pharmacy" && (phName.trim().length < 2 || address.trim().length < 2)) { setErr("Dorixona nomi va manzilini kiriting"); return; }
+    if ((role === "vet" || role === "master") && !chosen.length) { setErr("Kamida bitta xizmatni tanlang"); return; }
     setBusy(true); setErr("");
     try {
-      if (role === "vet") {
+      if (role === "vet" || role === "master") {
         must(await supabase.from("vets").upsert({
-          id: uid, full_name: name.trim(), phone, region, district, village: village.trim(), status: "online",
+          id: uid, kind: role, services: chosen, full_name: name.trim(), phone, region, district, village: village.trim(), status: "online",
         }));
       }
       if (role === "pharmacy") {
@@ -60,7 +65,7 @@ export default function Onboarding() {
         <form onSubmit={save}>
           <div className="rolecards">
             {ROLES.map(([k, ic, t, d]) => (
-              <button type="button" key={k} className="rolecard" aria-pressed={role === k} onClick={() => setRole(k)}>
+              <button type="button" key={k} className="rolecard" aria-pressed={role === k} onClick={() => { setRole(k); setServices(null); }}>
                 <Icon name={ic} size={30} /><div><b>{t}</b><span>{d}</span></div>
               </button>
             ))}
@@ -68,7 +73,18 @@ export default function Onboarding() {
           <label className="label" htmlFor="obName">Ism-familiya</label>
           <input id="obName" type="text" autoComplete="name" value={name} onChange={(e) => setName(e.target.value)} placeholder="Masalan: Alisher Karimov" />
           <RegionSelect idPrefix="ob" region={region} district={district} onChange={(r, d) => { setRegion(r); setDistrict(d); }} />
-          <label className="label" htmlFor="obVillage">{role === "vet" ? "Ish joyi / qishloq" : "Qishloq, mahalla"}</label>
+          {(role === "vet" || role === "master") && (
+            <>
+              <span className="label">Qaysi xizmatlarni ko'rsatasiz?</span>
+              <div className="chips">
+                {allowed.map((s) => (
+                  <button type="button" key={s.id} className="chip" aria-pressed={chosen.includes(s.id)}
+                    onClick={() => setServices(chosen.includes(s.id) ? chosen.filter((x) => x !== s.id) : [...chosen, s.id])}>{s.n}</button>
+                ))}
+              </div>
+            </>
+          )}
+          <label className="label" htmlFor="obVillage">{role === "vet" || role === "master" ? "Ish joyi / qishloq" : "Qishloq, mahalla"}</label>
           <input id="obVillage" type="text" value={village} onChange={(e) => setVillage(e.target.value)} placeholder="Masalan: Qorako'l qishlog'i" />
           {role === "pharmacy" && (
             <>

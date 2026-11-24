@@ -4,16 +4,25 @@ import { useAuth } from "../auth.jsx";
 import { supabase, must } from "../lib/supabase.js";
 import { useDrugs, useLive } from "../lib/live.js";
 import { uploadPhoto } from "../lib/photos.js";
-import { CASE_STATUS, URGENCY, VET_STATUS, animalName } from "../lib/constants.js";
+import { CASE_STATUS, GESTATION, KIND_NAMES, PREG_METHODS, PREG_RESULT, URGENCY, VET_STATUS,
+  animalName, isProviderRole, providerWord, serviceName } from "../lib/constants.js";
+import { addDays, fmtDate, todayStr } from "../lib/animalcare.js";
+import { AnimalBadge, EventList, animalTitle } from "./farmer/AnimalParts.jsx";
 import { errText, googleMaps, jitsiUrl, som, when, yandexMaps } from "../lib/util.js";
 import { useToast } from "../toast.jsx";
 import { Avatar, ConfirmButton, ErrorNote, Icon, Loading, PhoneLine, Pill, StorageImage } from "../ui.jsx";
 import { ReservationCard, cancelReservation } from "./farmer/MyCases.jsx";
 import { StockPill, usePharmacies } from "./farmer/DrugSearch.jsx";
 
-const STEPS_CALL = [["new", "Ariza yuborildi", "created_at"], ["accepted", "Veterinar qabul qildi", "accepted_at"],
-  ["on_way", "Veterinar yo'lda", "on_way_at"], ["arrived", "Yetib keldi", "arrived_at"], ["done", "Yakunlandi", "done_at"]];
-const STEPS_VIDEO = [["new", "Ariza yuborildi", "created_at"], ["accepted", "Veterinar qabul qildi", "accepted_at"], ["done", "Yakunlandi", "done_at"]];
+const cap = (s) => s.charAt(0).toUpperCase() + s.slice(1);
+const stepsFor = (c) => {
+  const W = cap(providerWord(c.service));
+  if (c.kind === "video") return [["new", "Ariza yuborildi", "created_at"], ["accepted", `${W} qabul qildi`, "accepted_at"], ["done", "Yakunlandi", "done_at"]];
+  return [["new", "Ariza yuborildi", "created_at"], ["accepted", `${W} qabul qildi`, "accepted_at"],
+    ["on_way", `${W} yo'lda`, "on_way_at"], ["arrived", "Yetib keldi", "arrived_at"], ["done", "Yakunlandi", "done_at"]];
+};
+/** Natija kiritiladigan xizmatlar */
+const RESULT_SERVICES = ["insemination", "pregnancy", "shearing", "butcher"];
 const ACTIVE = ["accepted", "on_way", "arrived"];
 
 export default function CaseDetail() {
@@ -30,7 +39,7 @@ export default function CaseDetail() {
     [id], [{ table: "cases", filter: `id=eq.${id}` }, { table: "prescription_items", filter: `case_id=eq.${id}` }],
   );
   const c = live.data;
-  const back = profile.role === "vet" ? "/inbox" : "/cases";
+  const back = isProviderRole(profile.role) ? "/inbox" : "/cases";
 
   if (live.loading && !c) return <Loading />;
   if (!c) {
@@ -46,7 +55,10 @@ export default function CaseDetail() {
   const isFarmer = c.farmer_id === uid;
   const isVet = !isFarmer && Boolean(vet);
   const mine = c.vet_id === uid;
-  const steps = c.kind === "video" ? STEPS_VIDEO : STEPS_CALL;
+  const steps = stepsFor(c);
+  const svc = c.service || "treatment";
+  const isTreat = svc === "treatment";
+  const word = providerWord(svc);
   const idx = steps.findIndex((s) => s[0] === c.status);
   const closed = ["cancelled", "declined"].includes(c.status);
   const canTalk = Boolean(c.vet_id) && !closed && (isFarmer || mine);
@@ -84,8 +96,8 @@ export default function CaseDetail() {
       <>
         {c.status === "declined" && (
           <>
-            <div className="note">Veterinar bu arizani qabul qila olmadi.</div>
-            <button className="btn dark wide" disabled={busy} onClick={() => rpc("resend_case", { p_case: id }, "Tumandagi barcha veterinarlarga yuborildi")}>Barcha veterinarlarga yuborish</button>
+            <div className="note">{cap(word)} bu arizani qabul qila olmadi.</div>
+            <button className="btn dark wide" disabled={busy} onClick={() => rpc("resend_case", { p_case: id }, `Tumandagi barcha ${providerWord(svc, true)}ga yuborildi`)}>Barcha {providerWord(svc, true)}ga yuborish</button>
           </>
         )}
         {["new", "accepted", "on_way"].includes(c.status) && (
@@ -98,9 +110,11 @@ export default function CaseDetail() {
   return (
     <>
       <Link className="linkbtn" to={back}>← {isVet ? "Chaqiruvlar" : "Arizalarim"}</Link>
-      <h1>{animalName(c.animal)}{c.animal_count > 1 ? ` × ${c.animal_count}` : ""} · {c.kind === "video" ? "Video maslahat" : "Fermaga chaqiruv"}</h1>
+      <h1>{isTreat
+        ? <>{animalName(c.animal)}{c.animal_count > 1 ? ` × ${c.animal_count}` : ""} · {c.kind === "video" ? "Video maslahat" : "Fermaga chaqiruv"}</>
+        : <>{serviceName(svc)} · {animalName(c.animal)}{c.animal_count > 1 ? ` × ${c.animal_count}` : ""}</>}</h1>
       <div className="row" style={{ marginBottom: 12 }}>
-        <Pill s={CASE_STATUS[c.status]} /><Pill s={URGENCY[c.urgency]} /><span className="meta">{when(c.created_at)}</span>
+        <Pill s={CASE_STATUS[c.status]} />{isTreat && <Pill s={URGENCY[c.urgency]} />}<span className="meta">{when(c.created_at)}</span>
       </div>
 
       <div className="list">
@@ -123,20 +137,19 @@ export default function CaseDetail() {
               <Avatar name={c.vets.full_name} status={c.vets.status} />
               <div style={{ minWidth: 0 }}>
                 <h3>{c.vets.full_name}</h3>
-                <div className="meta"><span>{c.vets.village || c.vets.district}</span>{c.vets.experience > 0 && <span>{c.vets.experience} yil tajriba</span>}</div>
+                <div className="meta"><span>{KIND_NAMES[c.vets.kind] || "Veterinar"}</span><span>{c.vets.village || c.vets.district}</span>{c.vets.experience > 0 && <span>{c.vets.experience} yil tajriba</span>}</div>
                 <div className="tags"><Pill s={VET_STATUS[c.vets.status]} />{(c.vets.specs || []).map((s) => <span key={s} className="pill">{s}</span>)}</div>
               </div>
             </div>
             <PhoneLine phone={c.vets.phone} />
           </div>
         ) : (
-          <div className="card"><b>Veterinar kutilmoqda</b>
-            <div className="meta">{c.district} tumanidagi veterinarlarga yuborildi. Birinchi qabul qilgan veterinar shu yerda ko'rinadi va sizga SMS keladi.</div></div>
+          <div className="card"><b>{cap(word)} kutilmoqda</b>
+            <div className="meta">{c.district} tumanidagi {providerWord(svc, true)}ga yuborildi. Birinchi qabul qilgan {word} shu yerda ko'rinadi va sizga xabar keladi.</div></div>
         )}
 
         <div className="card">
-          <div className="meta">Alomatlar</div>
-          <div style={{ margin: "4px 0 6px" }}>{(c.symptoms || []).join(", ") || "—"}</div>
+          <CaseInfo c={c} />
           {c.note && <><div className="meta">Izoh</div><div style={{ whiteSpace: "pre-wrap" }}>{c.note}</div></>}
           {c.photo_path && <div style={{ marginTop: 10 }}><StorageImage path={c.photo_path} alt="Hayvon rasmi" /></div>}
         </div>
@@ -159,16 +172,195 @@ export default function CaseDetail() {
 
         {actions && <div>{actions}</div>}
 
-        {canTalk && ACTIVE.includes(c.status) && (
+        {svc === "butcher" && c.details?.inspection && isFarmer && !closed && (
+          <div className="note info">Go'sht sotuvga chiqadigan bo'lsa, veterinar ko'rigi kerak.
+            <Link className="btn ghost sm" style={{ width: "100%", marginTop: 8 }}
+              to={`/new?service=treatment${c.animal_id ? `&animal=${c.animal_id}` : ""}&note=${encodeURIComponent("So'yishdan oldin va keyin go'shtni veterinar ko'rigidan o'tkazish kerak.")}`}>Veterinar ko'rigini chaqirish</Link></div>
+        )}
+
+        {RESULT_SERVICES.includes(svc) && (c.result || (mine && [...ACTIVE, "done"].includes(c.status))) && (
+          <ServiceResult c={c} canEdit={mine && [...ACTIVE, "done"].includes(c.status)} reload={live.reload} />
+        )}
+
+        {c.animal_id && (isFarmer || mine) && <AnimalPanel animalId={c.animal_id} isFarmer={isFarmer} />}
+
+        {isTreat && canTalk && ACTIVE.includes(c.status) && (
           <>
             <a className="btn primary" href={jitsiUrl(c.id)} target="_blank" rel="noreferrer"><Icon name="video" size={20} />Video qo'ng'iroqqa kirish</a>
             <div className="meta" style={{ marginTop: -4 }}>Video yangi oynada ochiladi. Ikkala tomon ham shu tugmani bossin.</div>
           </>
         )}
 
-        <Prescription c={c} canEdit={mine && [...ACTIVE, "done"].includes(c.status)} reload={live.reload} />
+        {!["shearing", "butcher"].includes(svc) && <Prescription c={c} canEdit={mine && [...ACTIVE, "done"].includes(c.status)} reload={live.reload} />}
         {isFarmer && c.prescription_items?.length > 0 && <PharmacyPanel c={c} />}
         {canTalk && <Chat caseId={c.id} />}
+      </div>
+    </>
+  );
+}
+
+const fmtLocalDT = (v) => (v ? `${String(v).slice(11, 16)}, ${String(v).slice(8, 10)}.${String(v).slice(5, 7)}` : "");
+
+/** Arizadagi xizmatga xos ma'lumotlar */
+function CaseInfo({ c }) {
+  const d = c.details || {};
+  const rows = [];
+  switch (c.service || "treatment") {
+    case "treatment": rows.push(["Alomatlar", (c.symptoms || []).join(", ") || "—"]); break;
+    case "insemination":
+      if (d.heat_signs?.length) rows.push(["Kuyikish belgilari", d.heat_signs.join(", ")]);
+      if (d.heat_at) rows.push(["Kuyikish boshlangan", fmtLocalDT(d.heat_at)]);
+      if (d.bull_wish) rows.push(["Istalgan buqa zoti", d.bull_wish]);
+      break;
+    case "pregnancy":
+      if (d.ins_date) rows.push(["Urug'lantirilgan sana", fmtDate(d.ins_date)]);
+      rows.push(["Tekshiruv usuli", PREG_METHODS[d.method_wish] || PREG_METHODS.any]);
+      break;
+    case "shearing": rows.push(["Bosh soni", c.animal_count]); break;
+    case "butcher":
+      rows.push(["Ishlar", (d.tasks || []).join(", ") || "—"]);
+      if (d.inspection) rows.push(["Veterinar ko'rigi", "Kerak — go'sht sotuvga chiqadi"]);
+      break;
+    default: break;
+  }
+  if (c.preferred_date) rows.push(["Qulay sana", fmtDate(c.preferred_date)]);
+  return <dl className="kv">{rows.map(([k, v]) => <div key={k}><dt>{k}</dt><dd>{v}</dd></div>)}</dl>;
+}
+
+/** Xizmat natijasi: mutaxassis kiritadi, chorvador ko'radi. Hayvon kartasi bo'lsa — tarixga ham yoziladi. */
+function ServiceResult({ c, canEdit, reload }) {
+  const toast = useToast();
+  const svc = c.service;
+  const r = c.result;
+  const [edit, setEdit] = useState(false);
+  const [f, setF] = useState({});
+  const [busy, setBusy] = useState(false);
+  const set = (p) => setF((x) => ({ ...x, ...p }));
+
+  const start = () => {
+    const mw = c.details?.method_wish;
+    setF({
+      date: r?.date || todayStr(), bull_breed: r?.bull_breed ?? c.details?.bull_wish ?? "", batch: r?.batch ?? "",
+      result: r?.result || "", method: r?.method || (mw === "uzi" || mw === "rektal" ? mw : ""), term_days: r?.term_days ?? "",
+      heads: r?.heads ?? c.animal_count ?? "", wool_kg: r?.wool_kg ?? "", note: r?.note ?? "",
+    });
+    setEdit(true);
+  };
+
+  async function save() {
+    if (svc === "pregnancy" && !f.result) { toast("Natijani tanlang"); return; }
+    const base = { date: f.date, note: f.note.trim() };
+    const payload = svc === "insemination" ? { ...base, bull_breed: f.bull_breed.trim(), batch: f.batch.trim() }
+      : svc === "pregnancy" ? { ...base, result: f.result, method: f.method, term_days: String(f.term_days || "").trim() }
+      : svc === "shearing" ? { ...base, heads: String(f.heads || "").trim(), wool_kg: String(f.wool_kg || "").replace(",", ".").trim() }
+      : { ...base, heads: String(f.heads || "").trim() };
+    setBusy(true);
+    try {
+      must(await supabase.rpc("save_service_result", { p_case: c.id, p_result: payload }));
+      toast(c.animal_id ? "Natija saqlandi va hayvon kartasiga yozildi" : "Natija saqlandi");
+      setEdit(false); reload();
+    } catch (e) { toast(errText(e)); }
+    setBusy(false);
+  }
+
+  let due = null;
+  if (svc === "pregnancy" && r?.result === "pregnant" && GESTATION[c.animal]) {
+    const ins = r.term_days ? addDays(r.date, -r.term_days) : c.details?.ins_date ? addDays(c.details.ins_date, 0) : null;
+    if (ins) due = new Date(ins.getTime() + GESTATION[c.animal] * 86400000);
+  }
+
+  return (
+    <>
+      <h2>Natija</h2>
+      {r && !edit && (
+        <div className="rx">
+          <header><b>{c.vets?.full_name || "Mutaxassis"}</b><span>{fmtDate(r.date)}</span></header>
+          <dl className="kv" style={{ padding: "8px 14px 12px" }}>
+            {svc === "insemination" && <>
+              <div><dt>Buqa zoti</dt><dd>{r.bull_breed || "—"}</dd></div>
+              {r.batch && <div><dt>Urug' partiyasi</dt><dd>{r.batch}</dd></div>}
+            </>}
+            {svc === "pregnancy" && <>
+              <div><dt>Natija</dt><dd><Pill s={PREG_RESULT[r.result]} /></dd></div>
+              {r.method && <div><dt>Usul</dt><dd>{PREG_METHODS[r.method]}</dd></div>}
+              {r.term_days ? <div><dt>Bo'g'ozlik muddati</dt><dd>~{r.term_days} kun</dd></div> : null}
+              {due && <div><dt>Taxminiy tug'ish</dt><dd><b>{fmtDate(due)}</b></dd></div>}
+            </>}
+            {(svc === "shearing" || svc === "butcher") && r.heads ? <div><dt>Bosh soni</dt><dd>{r.heads}</dd></div> : null}
+            {svc === "shearing" && r.wool_kg ? <div><dt>Olingan jun</dt><dd>{r.wool_kg} kg</dd></div> : null}
+            {r.note && <div><dt>Izoh</dt><dd style={{ whiteSpace: "pre-wrap" }}>{r.note}</dd></div>}
+          </dl>
+        </div>
+      )}
+      {!r && !edit && <div className="meta">Ish bajarilgach natijani kiriting — chorvadorga va hayvon kartasiga yoziladi.</div>}
+      {canEdit && !edit && <button className="btn ghost" onClick={start}>{r ? "Natijani tahrirlash" : "Natijani kiritish"}</button>}
+      {edit && (
+        <div className="card">
+          <label className="label" htmlFor="srDate" style={{ marginTop: 0 }}>Sana</label>
+          <input id="srDate" className="field" type="date" max={todayStr()} value={f.date} onChange={(e) => set({ date: e.target.value })} />
+          {svc === "insemination" && <>
+            <label className="label" htmlFor="srBull">Buqa zoti</label>
+            <input id="srBull" type="text" maxLength={60} value={f.bull_breed} onChange={(e) => set({ bull_breed: e.target.value })} placeholder="Masalan: Golshtin" />
+            <label className="label" htmlFor="srBatch">Urug' partiyasi / raqami</label>
+            <input id="srBatch" type="text" maxLength={60} value={f.batch} onChange={(e) => set({ batch: e.target.value })} />
+          </>}
+          {svc === "pregnancy" && <>
+            <span className="label">Natija</span>
+            <div className="seg">
+              {Object.entries(PREG_RESULT).map(([k, [t, tone]]) => (
+                <button key={k} className={`t-${tone}`} aria-pressed={f.result === k} onClick={() => set({ result: k })}>{t}</button>
+              ))}
+            </div>
+            <span className="label">Usul</span>
+            <div className="seg" style={{ "--n": 2 }}>
+              {["uzi", "rektal"].map((k) => <button key={k} aria-pressed={f.method === k} onClick={() => set({ method: k })}>{PREG_METHODS[k]}</button>)}
+            </div>
+            {f.result === "pregnant" && <>
+              <label className="label" htmlFor="srTerm">Bo'g'ozlik muddati (kun, taxminan)</label>
+              <input id="srTerm" type="number" min="1" max="400" value={f.term_days} onChange={(e) => set({ term_days: e.target.value })} />
+            </>}
+          </>}
+          {(svc === "shearing" || svc === "butcher") && <>
+            <label className="label" htmlFor="srHeads">Bosh soni</label>
+            <input id="srHeads" type="number" min="1" max="99999" value={f.heads} onChange={(e) => set({ heads: e.target.value })} />
+          </>}
+          {svc === "shearing" && <>
+            <label className="label" htmlFor="srWool">Olingan jun (kg, ixtiyoriy)</label>
+            <input id="srWool" type="number" min="0" step="0.1" value={f.wool_kg} onChange={(e) => set({ wool_kg: e.target.value })} />
+          </>}
+          <label className="label" htmlFor="srNote">Izoh, tavsiya</label>
+          <textarea id="srNote" value={f.note} onChange={(e) => set({ note: e.target.value })} />
+          <div className="grid2" style={{ marginTop: 10 }}>
+            <button className="btn ghost" onClick={() => setEdit(false)}>Bekor</button>
+            <button className="btn dark" disabled={busy} onClick={save}>{busy ? "Saqlanmoqda…" : "Saqlash"}</button>
+          </div>
+        </div>
+      )}
+    </>
+  );
+}
+
+/** Arizaga bog'langan hayvon kartasi: chorvadorga havola, mutaxassisga qisqa tarix */
+function AnimalPanel({ animalId, isFarmer }) {
+  const a = useLive(async () => must(await supabase.from("animals").select("*").eq("id", animalId).maybeSingle()), [animalId], []);
+  const ev = useLive(
+    async () => must(await supabase.from("animal_events").select("*").eq("animal_id", animalId)
+      .order("event_date", { ascending: false }).order("id", { ascending: false }).limit(8)),
+    [animalId], [{ table: "animal_events", filter: `animal_id=eq.${animalId}` }],
+  );
+  if (!a.data) return null;
+  const x = a.data;
+  return (
+    <>
+      <h2>Hayvon kartasi</h2>
+      <div className="card">
+        <div className="row" style={{ alignItems: "flex-start" }}>
+          <AnimalBadge species={x.species} />
+          <div className="grow"><h3>{animalTitle(x)}</h3>
+            <div className="meta">{x.breed && <span>{x.breed}</span>}{x.birth_year && <span>{x.birth_year}-yil</span>}<span>{x.sex === "m" ? "Erkak" : "Urg'ochi"}</span></div></div>
+          {isFarmer && <Link className="btn ghost sm" to={`/animal/${animalId}`}>Ochish</Link>}
+        </div>
+        <div style={{ marginTop: 10 }}><EventList events={ev.data || []} linkCases={isFarmer} /></div>
       </div>
     </>
   );

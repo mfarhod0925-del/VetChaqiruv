@@ -12,3 +12,6 @@ verify_jwt = false   # Telegram initData imzosi bilan tekshiriladi
 
 [functions.bot]
 verify_jwt = false   # Telegram webhook maxfiy kaliti bilan tekshiriladi
+
+[functions.ai-maslahat]
+verify_jwt = false   # foydalanuvchi sessiyasi funksiya ichida tekshiriladi (yangi kalitlar bilan ham ishlaydi)

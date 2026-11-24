@@ -182,6 +182,12 @@ const ANIMALS: Record<string, string> = {
   sigir: "sigir", qoy: "qo'y", echki: "echki", ot: "ot", parranda: "parranda", boshqa: "hayvon",
 };
 const MAX_VETS_PER_CASE = 15; // bitta ariza uchun ko'pi bilan nechta vetga SMS
+// Davolashdan boshqa xizmatlar (davolash uchun eski, moderatsiyadan o'tgan matnlar o'zgarmaydi)
+const SERVICES: Record<string, string> = {
+  insemination: "sun'iy urug'lantirish", pregnancy: "homiladorlik tekshiruvi",
+  shearing: "jun olish (qirqim)", butcher: "qassob xizmati",
+};
+const fmtDate = (d?: string | null) => (d ? `${d.slice(8, 10)}.${d.slice(5, 7)}.${d.slice(0, 4)}` : "");
 
 const json = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), { status, headers: { "Content-Type": "application/json" } });
@@ -210,35 +216,45 @@ Deno.serve(async (req) => {
     const place = c.village ? `${c.village}, ${c.district}` : `${c.district} tumani`;
     const link = app ? ` ${app}/case/${c.id}` : "";
     const reopened = type === "UPDATE" && c.status === "new" && old_record?.status === "declined";
+    const service = String(c.service ?? "treatment");
+    const svcName = SERVICES[service];
 
     if (type === "INSERT" || reopened) {
       let q = sb.from("vets").select("id, phone");
       if (c.vet_id) {
         q = q.eq("id", c.vet_id);
       } else {
-        q = q.eq("region", c.region).eq("district", c.district).neq("status", "offline");
+        q = q.eq("region", c.region).eq("district", c.district).neq("status", "offline").contains("services", [service]);
       }
       const { data: vets, error } = await q.limit(MAX_VETS_PER_CASE + 10);
       if (error) console.error(error);
       const declined: string[] = c.declined_by ?? [];
       const urgent = c.urgency === "shoshilinch" ? "SHOSHILINCH " : "";
       const kind = c.kind === "video" ? "video maslahat" : "chaqiruv";
+      const count = Number(c.animal_count) > 1 ? ` × ${c.animal_count}` : "";
+      const when = c.preferred_date ? ` Sana: ${fmtDate(c.preferred_date)}.` : "";
+      const text = svcName
+        ? `VetChaqiruv: yangi buyurtma — ${svcName}. ${animal}${count}, ${place}.${when}${link}`
+        : `VetChaqiruv: ${urgent}yangi ${kind}. ${animal}, ${place}.${link}`;
       for (const v of (vets ?? []).filter((v) => !declined.includes(v.id)).slice(0, MAX_VETS_PER_CASE)) {
-        out.push({ phone: v.phone, text: `VetChaqiruv: ${urgent}yangi ${kind}. ${animal}, ${place}.${link}`, path: `/case/${c.id}`, btn: "📄 Arizani ko'rish" });
+        out.push({ phone: v.phone, text, path: `/case/${c.id}`, btn: "📄 Arizani ko'rish" });
       }
     } else if (type === "UPDATE") {
       const vet = c.vet_id
-        ? (await sb.from("vets").select("full_name, phone").eq("id", c.vet_id).maybeSingle()).data
+        ? (await sb.from("vets").select("full_name, phone, kind").eq("id", c.vet_id).maybeSingle()).data
         : null;
+      // Ustaga (qirqim, qassob, urug'lantirish texnigi) "veterinar" demaymiz
+      const who = vet?.kind === "master" ? "usta" : svcName ? "mutaxassis" : "veterinar";
+      const whoMany = vet?.kind === "master" ? "ustalarga" : svcName ? "mutaxassislarga" : "veterinarlarga";
       switch (c.status) {
         case "accepted":
-          if (vet) out.push({ phone: c.phone, text: `VetChaqiruv: veterinar ${vet.full_name} arizangizni qabul qildi. Tel: ${vet.phone}`, path: `/case/${c.id}`, btn: "📄 Arizani ochish" });
+          if (vet) out.push({ phone: c.phone, text: `VetChaqiruv: ${who} ${vet.full_name} arizangizni qabul qildi. Tel: ${vet.phone}`, path: `/case/${c.id}`, btn: "📄 Arizani ochish" });
           break;
         case "on_way":
-          if (vet) out.push({ phone: c.phone, text: `VetChaqiruv: veterinar ${vet.full_name} yo'lga chiqdi.`, path: `/case/${c.id}`, btn: "📄 Arizani ochish" });
+          if (vet) out.push({ phone: c.phone, text: `VetChaqiruv: ${who} ${vet.full_name} yo'lga chiqdi.`, path: `/case/${c.id}`, btn: "📄 Arizani ochish" });
           break;
         case "declined":
-          out.push({ phone: c.phone, text: `VetChaqiruv: veterinar arizani qabul qila olmadi. Ilovada boshqa veterinarlarga yuboring.${link}`, path: `/case/${c.id}`, btn: "🔁 Boshqa veterinarga yuborish" });
+          out.push({ phone: c.phone, text: `VetChaqiruv: ${who} arizani qabul qila olmadi. Ilovada boshqa ${whoMany} yuboring.${link}`, path: `/case/${c.id}`, btn: "🔁 Boshqa veterinarga yuborish" });
           break;
         case "cancelled":
           if (vet && old_record?.status !== "new") out.push({ phone: vet.phone, text: `VetChaqiruv: chorvador ${c.contact_name} chaqiruvni bekor qildi.`, path: "/inbox", btn: "🔔 Chaqiruvlar" });
