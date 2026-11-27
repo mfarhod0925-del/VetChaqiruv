@@ -47,5 +47,33 @@ export const VET_STATUS = {
   online: ["Bo'sh", "ok"], busy: ["Band", "warn"], offline: ["Ishda emas", "mute"],
 };
 
-export const ROLE_NAMES = { farmer: "Chorvador", vet: "Veterinar", pharmacy: "Dorixona" };
-export const ROLE_HOME = { farmer: "/new", vet: "/inbox", pharmacy: "/orders" };
+export const ROLE_NAMES = { farmer: "Chorvador", vet: "Veterinar", pharmacy: "Dorixona", master: "Usta" };
+export const ROLE_HOME = { farmer: "/new", vet: "/inbox", pharmacy: "/orders", master: "/jobs" };
+
+// Ustalar xizmatlari
+export const SERVICES = {
+  jun: { n: "Jun olish", d: "Qo'y-echki junini qirqish", icon: "scissors", animals: ["qoy", "echki"] },
+  qassob: { n: "Qassob", d: "So'yish va go'shtni tayyorlash", icon: "knife", animals: ["sigir", "buqa", "qoy", "echki", "ot", "boshqa"] },
+  urug: { n: "Sun'iy urug'lantirish", d: "Urug'lantiruvchi mutaxassis chaqirish", icon: "drop", animals: ["sigir", "qoy", "echki", "ot"] },
+  homila: { n: "Homiladorlikni tekshirish", d: "Bo'g'ozlikni aniqlash (UZI yoki qo'lda)", icon: "heart", animals: ["sigir", "qoy", "echki", "ot"] },
+};
+export const serviceName = (s) => SERVICES[s]?.n || s;
+
+export const ORDER_STATUS = {
+  new: ["Yangi", "warn"], accepted: ["Qabul qilindi", "ok"], on_way: ["Yo'lda", "ok"],
+  done: ["Bajarildi", "mute"], declined: ["Rad etildi", "bad"], cancelled: ["Bekor qilindi", "mute"],
+};
+
+// Sotuv va xizmat uchun hayvon turlari (buqa qo'shilgan)
+const BUQA = { id: "buqa", n: "Buqa", p: '<path d="M4 9c0-2 1-3 3-3h10c2 0 3 1 3 3v4c0 1-1 2-2 2h-1v4h-2v-4H9v4H7v-4H6c-1 0-2-1-2-2z"/><path d="M7 6C5 6 3 5 3 3M17 6c2 0 4-1 4-3"/><circle cx="12" cy="12" r="1.2"/>' };
+export const SALE_ANIMALS = [ANIMALS[0], BUQA, ...ANIMALS.slice(1, 4), ANIMALS[5]];
+export const saleAnimalName = (id) => (id === "buqa" ? "Buqa" : animalName(id));
+
+export const LISTING_STATUS = { open: ["Sotuvda", "ok"], sold: ["Sotildi", "mute"], closed: ["Yopilgan", "mute"] };
+export const OFFER_STATUS = {
+  pending: ["Javob kutilmoqda", "warn"], accepted: ["Qabul qilindi", "ok"], rejected: ["Rad etildi", "bad"], withdrawn: ["Qaytarib olingan", "mute"],
+};
+
+// Hayvon taqvimi
+export const BREED_KINDS = ANIMALS.slice(0, 4); // sigir, qo'y, echki, ot
+export const GESTATION = { sigir: 283, qoy: 150, echki: 150, ot: 340 };

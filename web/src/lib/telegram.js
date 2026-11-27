@@ -36,9 +36,10 @@ export function initTelegram() {
 /** /start yoki t.me/bot/app?startapp=... orqali kelgan parametr → ilova sahifasi. */
 export function startPath() {
   const p = String(tg?.initDataUnsafe?.start_param || "");
-  const m = p.match(/^case_([0-9a-f-]{36})$/i);
-  if (m) return `/case/${m[1]}`;
+  const m = p.match(/^(case|order|listing)_([0-9a-f-]{36})$/i);
+  if (m) return `/${m[1].toLowerCase()}/${m[2]}`;
   if (p === "new") return "/new";
+  if (p === "ai") return "/ai";
   return null;
 }
 

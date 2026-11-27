@@ -20,16 +20,29 @@ import VetProfile from "./pages/vet/VetProfile.jsx";
 import Orders from "./pages/pharmacy/Orders.jsx";
 import Stock from "./pages/pharmacy/Stock.jsx";
 import PharmacyProfile from "./pages/pharmacy/PharmacyProfile.jsx";
+import Services from "./pages/Services.jsx";
+import NewOrder from "./pages/farmer/NewOrder.jsx";
+import OrderDetail from "./pages/OrderDetail.jsx";
+import Sell from "./pages/farmer/Sell.jsx";
+import ListingDetail from "./pages/ListingDetail.jsx";
+import Animals, { AnimalDetail } from "./pages/farmer/Animals.jsx";
+import Ai from "./pages/Ai.jsx";
+import Jobs from "./pages/master/Jobs.jsx";
+import Market from "./pages/master/Market.jsx";
+import MasterProfile from "./pages/master/MasterProfile.jsx";
 
 const TABS = {
-  farmer: [["/new", "Ariza", "plus"], ["/cases", "Arizalarim", "list"], ["/vets", "Vetlar", "user"], ["/drugs", "Dorilar", "pharm"]],
-  vet: [["/inbox", "Chaqiruvlar", "bell"], ["/vet-profile", "Profil", "user"]],
+  farmer: [["/new", "Ariza", "plus"], ["/services", "Xizmatlar", "grid"], ["/cases", "Arizalarim", "list"], ["/animals", "Taqvim", "cal"], ["/ai", "Maslahat", "spark"]],
+  vet: [["/inbox", "Chaqiruvlar", "bell"], ["/ai", "Maslahat", "spark"], ["/vet-profile", "Profil", "user"]],
   pharmacy: [["/orders", "Buyurtmalar", "bell"], ["/stock", "Ombor", "box"], ["/pharmacy-profile", "Profil", "user"]],
+  master: [["/jobs", "Buyurtmalar", "bell"], ["/market", "Bozor", "tag"], ["/ai", "Maslahat", "spark"], ["/master-profile", "Profil", "user"]],
 };
 
 function Layout() {
-  const { profile } = useAuth();
-  const tabs = TABS[profile.role] || TABS.farmer;
+  const { profile, master } = useAuth();
+  let tabs = TABS[profile.role] || TABS.farmer;
+  // Bozor faqat qassoblar uchun
+  if (profile.role === "master" && !master?.services?.includes("qassob")) tabs = tabs.filter(([to]) => to !== "/market");
   return (
     <div className="app">
       <header className="top">
@@ -118,6 +131,17 @@ function Gate() {
         <Route path="/orders" element={<Orders />} />
         <Route path="/stock" element={<Stock />} />
         <Route path="/pharmacy-profile" element={<PharmacyProfile />} />
+        <Route path="/services" element={<Services />} />
+        <Route path="/order/new" element={<NewOrder />} />
+        <Route path="/order/:id" element={<OrderDetail />} />
+        <Route path="/sell" element={<Sell />} />
+        <Route path="/listing/:id" element={<ListingDetail />} />
+        <Route path="/animals" element={<Animals />} />
+        <Route path="/animals/:id" element={<AnimalDetail />} />
+        <Route path="/ai" element={<Ai />} />
+        <Route path="/jobs" element={<Jobs />} />
+        <Route path="/market" element={<Market />} />
+        <Route path="/master-profile" element={<MasterProfile />} />
         <Route path="/settings" element={<Settings />} />
         <Route path="*" element={<Navigate to={home} replace />} />
       </Route>

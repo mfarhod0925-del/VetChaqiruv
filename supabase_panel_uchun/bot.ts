@@ -2,6 +2,7 @@
 //   GET  ?setup=1  → webhook, menyu tugmasi, buyruqlar va tavsifni sozlaydi (bir marta brauzerda oching)
 //   GET            → "Bot ishlayapti" tekshiruvi
 //   POST (Telegram) → /start, /help, /raqam, /bildirishnoma, telefon raqamini qabul qilish
+//   POST ?cron=1    → hayvon taqvimi eslatmalarini yuborish (pg_cron har kuni chaqiradi, x-notify-secret bilan)
 //
 // Sozlamalar: TELEGRAM_BOT_TOKEN, APP_URL. SUPABASE_URL va SUPABASE_SERVICE_ROLE_KEY ni Supabase o'zi beradi.
 import { createClient } from "npm:@supabase/supabase-js@2";
@@ -192,10 +193,54 @@ const contactKb = {
 
 /** /start parametridan ilova sahifasini topadi: case_<uuid> → /case/<uuid> */
 function startPath(param: string): string {
-  const m = param.match(/^case_([0-9a-f-]{36})$/i);
-  if (m) return `/case/${m[1]}`;
+  const m = param.match(/^(case|order|listing)_([0-9a-f-]{36})$/i);
+  if (m) return `/${m[1].toLowerCase()}/${m[2]}`;
   if (param === "new") return "/new";
+  if (param === "ai") return "/ai";
   return "";
+}
+
+/** Bugungi va o'tib ketgan, hali yuborilmagan eslatmalarni Telegram'ga (bo'lmasa SMS'ga) yuboradi. */
+async function runReminders() {
+  const today = new Date(Date.now() + 5 * 3600_000).toISOString().slice(0, 10);
+  const { data: rows, error } = await sb.from("reminders").select("id, user_id, title, body, due_on")
+    .is("sent_at", null).lte("due_on", today).order("due_on").limit(400);
+  if (error) return { error: error.message };
+  if (!rows?.length) return { ok: true, sent: 0 };
+
+  const uids = [...new Set(rows.map((r) => r.user_id))];
+  const { data: profs } = await sb.from("profiles").select("id, phone").in("id", uids);
+  const phoneOf = new Map((profs ?? []).map((p) => [p.id, normalizePhone(p.phone)]));
+  const phones = [...new Set([...phoneOf.values()].filter(Boolean))] as string[];
+  const { data: tgu } = await sb.from("telegram_users").select("user_id, phone, chat_id, notify, bot_blocked")
+    .or(`user_id.in.(${uids.join(",")})${phones.length ? `,phone.in.(${phones.join(",")})` : ""}`);
+  const chatOf = (uid: string) => {
+    const ph = phoneOf.get(uid);
+    const t = (tgu ?? []).find((x) => x.user_id === uid || (ph && x.phone === ph));
+    return t && t.notify && !t.bot_blocked ? t.chat_id as number : null;
+  };
+
+  let tgSent = 0, smsSent = 0, failed = 0;
+  for (const r of rows) {
+    const chat = chatOf(r.user_id);
+    let done = false;
+    if (chat && BOT_TOKEN) {
+      const res = await tg("sendMessage", {
+        chat_id: chat, parse_mode: "HTML",
+        text: `📅 <b>${escH(r.title)}</b>\n\n${escH(r.body)}\n\n<i>Umumiy tavsiya. Aniq muddatni veterinar bilan kelishing.</i>`,
+        reply_markup: APP_URL ? openBtn("📅 Taqvimni ochish", "/animals") : undefined,
+      });
+      done = Boolean(res.ok);
+      if (done) tgSent++;
+    }
+    if (!done && smsEnabled() && phoneOf.get(r.user_id)) {
+      try { await sendSms(phoneOf.get(r.user_id)!, `VetChaqiruv: ${r.title}`); done = true; smsSent++; }
+      catch (e) { console.error("reminder sms", e); }
+    }
+    if (!done) failed++;
+    await sb.from("reminders").update({ sent_at: new Date().toISOString() }).eq("id", r.id);
+  }
+  return { ok: true, telegram: tgSent, sms: smsSent, failed };
 }
 
 // deno-lint-ignore no-explicit-any
@@ -245,7 +290,9 @@ Deno.serve(async (req) => {
           "VetChaqiruv chorvadorlarni tumanidagi veterinarlar va vet-dorixonalar bilan bog'laydi.\n\n" +
           "🐄 Kasal hayvon uchun veterinar chaqiring yoki video maslahat oling\n" +
           "💊 Kerakli dori qaysi dorixonada borligini biling va band qiling\n" +
-          "🔔 Ariza holati haqidagi xabarlar shu yerga keladi",
+          "✂️ Jun oluvchi, qassob, sun'iy urug'lantiruvchi chaqiring, chorvangizni soting\n" +
+          "📅 Hayvon taqvimi: tekshiruv va tug'ish kunini eslatib turamiz\n" +
+          "🤖 AI maslahatchiga chorvachilik bo'yicha savol bering",
       })).ok,
       qisqa_tavsif: (await tg("setMyShortDescription", {
         short_description: "Hayvoningizga tez yordam: veterinar chaqirish va dori topish 🐄",
@@ -254,6 +301,13 @@ Deno.serve(async (req) => {
     });
   }
   if (req.method !== "POST") return ok();
+
+  // Kunlik eslatmalar (pg_cron → public.reminders_tick)
+  if (url.searchParams.get("cron") === "1") {
+    const secret = Deno.env.get("NOTIFY_SECRET");
+    if (!secret || req.headers.get("x-notify-secret") !== secret) return new Response("forbidden", { status: 403 });
+    return json(await runReminders());
+  }
 
   if (!BOT_TOKEN || req.headers.get("x-telegram-bot-api-secret-token") !== await webhookSecret()) {
     return new Response("forbidden", { status: 403 });
@@ -318,7 +372,10 @@ Deno.serve(async (req) => {
         `VetChaqiruv chorvadorlarni tumanidagi veterinarlar va vet-dorixonalar bilan bog'laydi.\n\n` +
         `🐄 Kasal hayvon uchun veterinar chaqiring yoki video maslahat oling\n` +
         `💊 Kerakli dori qaysi dorixonada borligini biling\n` +
-        `🩺 Veterinar va dorixonalar ham shu ilovada ishlaydi`,
+        `✂️ Jun oluvchi, qassob, sun'iy urug'lantiruvchi chaqiring yoki chorvangizni soting\n` +
+        `📅 Hayvon taqvimi: tekshiruv va tug'ish kunini shu yerga eslatib turaman\n` +
+        `🤖 AI maslahatchiga savol bering\n` +
+        `🩺 Veterinar, dorixona va ustalar ham shu ilovada ishlaydi`,
       reply_markup: hasPhone ? openBtn(path ? "📄 Arizani ochish" : undefined, path) : contactKb,
     });
     if (!hasPhone) {

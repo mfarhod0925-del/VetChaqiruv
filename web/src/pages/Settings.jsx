@@ -8,7 +8,7 @@ import { useToast } from "../toast.jsx";
 import { RegionSelect } from "../ui.jsx";
 
 export default function Settings() {
-  const { user, profile, vet, pharmacy, updateProfile, signOut } = useAuth();
+  const { user, profile, vet, pharmacy, master, updateProfile, signOut } = useAuth();
   const toast = useToast();
   const nav = useNavigate();
   const [f, setF] = useState({ full_name: profile.full_name, region: profile.region, district: profile.district, village: profile.village });
@@ -35,6 +35,7 @@ export default function Settings() {
       await updateProfile({ role });
       if (role === "vet" && !vet) { toast("Veterinar profilini to'ldiring"); nav("/vet-profile"); return; }
       if (role === "pharmacy" && !pharmacy) { toast("Dorixona ma'lumotlarini kiriting"); nav("/pharmacy-profile"); return; }
+      if (role === "master" && !master) { toast("Usta profilini to'ldiring"); nav("/master-profile"); return; }
       nav(ROLE_HOME[role]);
     } catch (e) { toast(errText(e)); }
   }
@@ -54,7 +55,7 @@ export default function Settings() {
       <p className="lead">{fmtPhone(user?.phone)}</p>
 
       <span className="label">Rol</span>
-      <div className="seg">
+      <div className="seg" style={{ "--n": 4 }}>
         {Object.entries(ROLE_NAMES).map(([k, t]) => (
           <button key={k} aria-pressed={profile.role === k} onClick={() => switchRole(k)}>{t}</button>
         ))}

@@ -9,6 +9,7 @@ export function AuthProvider({ children }) {
   const [profile, setProfile] = useState(null);
   const [vet, setVet] = useState(null);
   const [pharmacy, setPharmacy] = useState(null);
+  const [master, setMaster] = useState(null);
   const [loaded, setLoaded] = useState(false);
   // Telegram ichida kirish holati: "idle" | "loading" | "need_phone" | "error"
   const [tgState, setTgState] = useState({ status: inTelegram ? "loading" : "idle", error: "" });
@@ -51,14 +52,16 @@ export function AuthProvider({ children }) {
   const uid = session?.user?.id ?? null;
 
   const reload = useCallback(async () => {
-    if (!uid) { setProfile(null); setVet(null); setPharmacy(null); setLoaded(true); return; }
+    if (!uid) { setProfile(null); setVet(null); setPharmacy(null); setMaster(null); setLoaded(true); return; }
     try {
-      const [p, v, ph] = await Promise.all([
+      const [p, v, ph, m] = await Promise.all([
         supabase.from("profiles").select("*").eq("id", uid).maybeSingle().then(must),
         supabase.from("vets").select("*").eq("id", uid).maybeSingle().then(must),
         supabase.from("pharmacies").select("*").eq("id", uid).maybeSingle().then(must),
+        // masters jadvali hali yaratilmagan bo'lsa ham ilova ishlayversin
+        supabase.from("masters").select("*").eq("id", uid).maybeSingle().then((r) => (r.error ? null : r.data)),
       ]);
-      setProfile(p); setVet(v); setPharmacy(ph);
+      setProfile(p); setVet(v); setPharmacy(ph); setMaster(m);
     } catch (e) {
       console.error(e);
     } finally {
@@ -78,11 +81,11 @@ export function AuthProvider({ children }) {
     forgetTgSession();
     await supabase.auth.signOut();
     if (inTelegram) setTgState({ status: "error", error: "" }); // Telegram'da "Qayta kirish" ekrani
-    setProfile(null); setVet(null); setPharmacy(null);
+    setProfile(null); setVet(null); setPharmacy(null); setMaster(null);
   }, []);
 
   const value = {
-    session, user: session?.user ?? null, uid, profile, vet, pharmacy,
+    session, user: session?.user ?? null, uid, profile, vet, pharmacy, master,
     ready: session !== undefined && (session === null || loaded),
     reload, updateProfile, signOut,
     tgState, telegramLogin,

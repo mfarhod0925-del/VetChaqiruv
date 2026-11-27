@@ -7,6 +7,8 @@ import { CASE_STATUS, RES_STATUS, animalName } from "../../lib/constants.js";
 import { ago, errText, som } from "../../lib/util.js";
 import { useToast } from "../../toast.jsx";
 import { ErrorNote, Loading, Pill } from "../../ui.jsx";
+import { OrderCard } from "../master/Jobs.jsx";
+import { ListingCard } from "./Sell.jsx";
 
 const STATUS_TOAST = {
   accepted: "Veterinar arizangizni qabul qildi",
@@ -76,6 +78,16 @@ export default function MyCases() {
     [uid], [{ table: "reservations", filter: `farmer_id=eq.${uid}` }],
   );
 
+  // Ustalar buyurtmalari va chorva e'lonlari (jadvallar hali yo'q bo'lsa — jim o'tadi)
+  const orders = useLive(
+    async () => { const r = await supabase.from("service_orders").select("*, masters(full_name)").eq("farmer_id", uid).order("created_at", { ascending: false }).limit(50); return r.error ? [] : r.data; },
+    [uid], [{ table: "service_orders", filter: `farmer_id=eq.${uid}` }],
+  );
+  const listings = useLive(
+    async () => { const r = await supabase.from("listings").select("*, offers(id, price, status)").eq("farmer_id", uid).eq("status", "open").order("created_at", { ascending: false }).limit(20); return r.error ? [] : r.data; },
+    [uid], [{ table: "listings", filter: `farmer_id=eq.${uid}` }, { table: "offers" }],
+  );
+
   // Holat o'zgarganda xabar beramiz
   const prev = useRef(null);
   useEffect(() => {
@@ -91,19 +103,26 @@ export default function MyCases() {
   const active = list.filter((c) => ["new", "accepted", "on_way", "arrived", "declined"].includes(c.status));
   const old = list.filter((c) => !active.includes(c));
   const rs = res.data || [];
+  const os = orders.data || [];
+  const activeOrders = os.filter((o) => ["new", "accepted", "on_way", "declined"].includes(o.status));
+  const oldOrders = os.filter((o) => !activeOrders.includes(o));
+  const ls = listings.data || [];
 
   return (
     <>
       <h1>Arizalarim</h1>
       <ErrorNote error={cases.error} onRetry={cases.reload} />
       {cases.loading && !cases.data ? <Loading /> : list.length === 0 ? (
-        <div className="empty">Hozircha ariza yo'q.<Link className="btn dark" to="/new">Yangi ariza</Link></div>
+        <div className="empty">Veterinarga ariza yo'q.<Link className="btn dark" to="/new">Yangi ariza</Link></div>
       ) : (
         <>
           {active.length > 0 && <div className="list">{active.map((c) => <CaseCard key={c.id} c={c} />)}</div>}
           {old.length > 0 && <><h2>Tarix</h2><div className="list">{old.map((c) => <CaseCard key={c.id} c={c} />)}</div></>}
         </>
       )}
+      {activeOrders.length > 0 && (<><h2>Usta buyurtmalari</h2><div className="list">{activeOrders.map((o) => <OrderCard key={o.id} o={o} />)}</div></>)}
+      {ls.length > 0 && (<><h2>Sotuvdagi chorvam</h2><div className="list">{ls.map((l) => <ListingCard key={l.id} l={l} />)}</div></>)}
+      {oldOrders.length > 0 && (<><h2>Bajarilgan buyurtmalar</h2><div className="list">{oldOrders.slice(0, 20).map((o) => <OrderCard key={o.id} o={o} />)}</div></>)}
       {rs.length > 0 && (
         <>
           <h2>Dori buyurtmalari</h2>

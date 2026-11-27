@@ -20,5 +20,10 @@ $PSQL -d t -f $R/supabase/migrations/20261016000002_seed_drugs.sql
 # Ikkinchi marta ishga tushirish xavfsizligi (idempotent)
 sed 's/^create extension if not exists pg_net;/-- pg_net (stub)/' $R/supabase/migrations/20261016000001_schema.sql | $PSQL -d t
 $PSQL -d t -f $R/tests/scenario.sql 2>&1 | grep -vE "^$" || STATUS=$?
+# Telegram va yangi xizmatlar (ikki marta — qayta ishga tushirish xavfsizligi)
+$PSQL -d t -f $R/supabase/migrations/20261111000001_telegram.sql
+$PSQL -d t -f $R/supabase/migrations/20261127000001_xizmatlar.sql
+$PSQL -d t -f $R/supabase/migrations/20261127000001_xizmatlar.sql
+$PSQL -d t -f $R/tests/scenario_xizmatlar.sql 2>&1 | grep -vE "^$" || STATUS=$?
 $RUN "$P/pg_ctl -D $D stop >/dev/null"
 exit ${STATUS:-0}

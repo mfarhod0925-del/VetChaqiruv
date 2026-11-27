@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useAuth } from "../auth.jsx";
 import { supabase, must } from "../lib/supabase.js";
-import { DEFAULT_REGION, REGIONS } from "../lib/constants.js";
+import { DEFAULT_REGION, REGIONS, SERVICES } from "../lib/constants.js";
 import { errText, fmtPhone } from "../lib/util.js";
 import { Icon, RegionSelect } from "../ui.jsx";
 
@@ -9,6 +9,7 @@ const ROLES = [
   ["farmer", "farm", "Chorvadorman", "Hayvonim uchun veterinar va dori kerak"],
   ["vet", "vet", "Veterinarman", "Chaqiruvlarni qabul qilaman, maslahat beraman"],
   ["pharmacy", "pharm", "Vet-dorixonaman", "Dorilar qoldig'ini ko'rsataman, buyurtma olaman"],
+  ["master", "scissors", "Ustaman", "Jun olaman, qassobman, urug'lantiraman yoki bo'g'ozlikni tekshiraman"],
 ];
 
 export default function Onboarding() {
@@ -20,6 +21,7 @@ export default function Onboarding() {
   const [village, setVillage] = useState(profile?.village || "");
   const [phName, setPhName] = useState("");
   const [address, setAddress] = useState("");
+  const [services, setServices] = useState([]);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
   const phone = "+" + String(user?.phone || profile?.phone || "").replace(/\D/g, "");
@@ -28,11 +30,17 @@ export default function Onboarding() {
     e.preventDefault();
     if (name.trim().length < 2) { setErr("Ism-familiyangizni kiriting"); return; }
     if (role === "pharmacy" && (phName.trim().length < 2 || address.trim().length < 2)) { setErr("Dorixona nomi va manzilini kiriting"); return; }
+    if (role === "master" && !services.length) { setErr("Qaysi xizmatlarni ko'rsatishingizni belgilang"); return; }
     setBusy(true); setErr("");
     try {
       if (role === "vet") {
         must(await supabase.from("vets").upsert({
           id: uid, full_name: name.trim(), phone, region, district, village: village.trim(), status: "online",
+        }));
+      }
+      if (role === "master") {
+        must(await supabase.from("masters").upsert({
+          id: uid, full_name: name.trim(), phone, region, district, village: village.trim(), services, status: "online",
         }));
       }
       if (role === "pharmacy") {
@@ -70,6 +78,17 @@ export default function Onboarding() {
           <RegionSelect idPrefix="ob" region={region} district={district} onChange={(r, d) => { setRegion(r); setDistrict(d); }} />
           <label className="label" htmlFor="obVillage">{role === "vet" ? "Ish joyi / qishloq" : "Qishloq, mahalla"}</label>
           <input id="obVillage" type="text" value={village} onChange={(e) => setVillage(e.target.value)} placeholder="Masalan: Qorako'l qishlog'i" />
+          {role === "master" && (
+            <>
+              <span className="label">Xizmatlaringiz</span>
+              <div className="chips">
+                {Object.entries(SERVICES).map(([k, s]) => (
+                  <button type="button" key={k} className="chip" aria-pressed={services.includes(k)}
+                    onClick={() => setServices(services.includes(k) ? services.filter((x) => x !== k) : [...services, k])}>{s.n}</button>
+                ))}
+              </div>
+            </>
+          )}
           {role === "pharmacy" && (
             <>
               <label className="label" htmlFor="obPh">Dorixona nomi</label>

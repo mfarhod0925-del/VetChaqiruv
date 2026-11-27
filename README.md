@@ -155,6 +155,10 @@ Foydalanuvchilar saytni telefonda ochib, **Sozlamalar → Telefonga o'rnatish** 
 
 Ilovani Telegram bot ichida ochish, SMS kodsiz kirish va bildirishnomalarni bot orqali yuborish: **[TELEGRAM.md](TELEGRAM.md)**.
 
+## Ustalar, chorva sotish, hayvon taqvimi va AI maslahatchi
+
+Jun olish, qassob, sun'iy urug'lantirish, homiladorlikni tekshirish, chorva bozori, taqvim eslatmalari va AI: **[XIZMATLAR.md](XIZMATLAR.md)**.
+
 ## 8-qadam. Video qo'ng'iroq
 
 Standart holatda bepul **Jitsi Meet** (`meet.jit.si`) ishlatiladi. Har bir ariza uchun alohida, taxmin qilib bo'lmaydigan xona ochiladi.

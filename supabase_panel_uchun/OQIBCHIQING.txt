@@ -6,6 +6,7 @@ faqat umumiy (_shared) qismi ichiga qo'shilgan, shuning uchun panelga bitta fayl
   bot.ts      -> funksiya nomi: bot
   tg-auth.ts  -> funksiya nomi: tg-auth
   notify.ts   -> funksiya nomi: notify   (mavjud bo'lsa, eski kodni almashtiring)
+  ai-chat.ts  -> funksiya nomi: ai-chat  (AI maslahatchi, XIZMATLAR.md ga qarang)
 
 Har biri uchun:
   1. Supabase -> VetChaqiruv-EU -> Edge Functions -> "Deploy a new function" -> "Via Editor"
@@ -17,7 +18,8 @@ Har biri uchun:
 
 Sirlar: Edge Functions -> Secrets (yoki Project Settings -> Edge Functions):
   TELEGRAM_BOT_TOKEN = BotFather bergan token
-  APP_URL            = https://web-c2pz.vercel.app
+  APP_URL            = https://vetchaqiruv.vercel.app
+  ANTHROPIC_API_KEY  = AI maslahatchi kaliti (console.anthropic.com)
 
 Oxirida brauzerda oching:
   https://aoojizjokvvpgtkoayoo.supabase.co/functions/v1/bot?setup=1

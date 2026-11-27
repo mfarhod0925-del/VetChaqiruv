@@ -4,6 +4,20 @@ const pad = (n) => String(n).padStart(2, "0");
 
 export const som = (n) => `${Math.round(+n || 0).toLocaleString("ru-RU").replace(/[\s,  ]/g, " ")} so'm`;
 
+/** "2026-11-27" → "27.11.2026" */
+export const fmtDate = (d) => (d ? String(d).slice(0, 10).split("-").reverse().join(".") : "");
+/** Toshkent bo'yicha bugungi sana "YYYY-MM-DD" */
+export const todayIso = () => new Date(Date.now() + 5 * 3600_000).toISOString().slice(0, 10);
+export function addDays(iso, n) {
+  const d = new Date(`${iso}T00:00:00Z`);
+  d.setUTCDate(d.getUTCDate() + n);
+  return d.toISOString().slice(0, 10);
+}
+export const daysBetween = (a, b) => Math.round((new Date(`${b}T00:00:00Z`) - new Date(`${a}T00:00:00Z`)) / 86400000);
+/** Pul kiritish: "12 500 000" → 12500000 */
+export const parseSom = (v) => Number(String(v || "").replace(/\D/g, "")) || 0;
+export const somInput = (v) => { const n = parseSom(v); return n ? n.toLocaleString("ru-RU").replace(/[\s,  ]/g, " ") : ""; };
+
 export function when(t) {
   if (!t) return "";
   const d = new Date(t);
@@ -63,6 +77,13 @@ const ERRORS = {
   bad_items: "Kamida bitta dorini tanlang.",
   pharmacy_not_found: "Dorixona topilmadi.",
   not_authenticated: "Qaytadan tizimga kiring.",
+  not_a_master: "Avval usta profilini yarating.",
+  order_not_found: "Buyurtma topilmadi.",
+  need_result: "Tekshiruv natijasini tanlang: bo'g'oz yoki bo'g'oz emas.",
+  listing_not_found: "E'lon topilmadi.",
+  listing_closed: "Bu e'lon yopilgan yoki sotilgan.",
+  not_a_buyer: "Narx taklif qilish uchun usta profilida «Qassob» xizmatini belgilang (shu viloyatda).",
+  bad_price: "Narxni to'g'ri kiriting.",
 };
 export function errText(e) {
   const msg = String(e?.message || e?.error_description || e || "");
